@@ -1,0 +1,69 @@
+[gd_scene load_steps=3 format=3 uid="uid://umlnblsfinio"]
+
+[ext_resource type="Script" uid="uid://c27xwoegnbdrg" path="res://scripts/menu.gd" id="1_yqeox"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_5p55f"]
+font_size = 81
+
+[node name="Menu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_yqeox")
+
+[node name="Screen1" type="Control" parent="."]
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="JoinGameButton" type="Button" parent="Screen1"]
+layout_mode = 0
+offset_left = 701.0
+offset_top = 251.0
+offset_right = 982.7737
+offset_bottom = 382.0
+text = "Join Game"
+
+[node name="CreateGameButton" type="Button" parent="Screen1"]
+layout_mode = 0
+offset_left = 195.0
+offset_top = 251.0
+offset_right = 476.7736
+offset_bottom = 382.0
+text = "Create Game"
+
+[node name="TextEdit" type="TextEdit" parent="Screen1"]
+layout_mode = 0
+offset_left = 308.0
+offset_top = 73.0
+offset_right = 809.0
+offset_bottom = 152.0
+placeholder_text = "Username"
+
+[node name="Screen2" type="Control" parent="."]
+visible = false
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="ItemList" type="ItemList" parent="Screen2"]
+layout_mode = 0
+offset_left = 135.0
+offset_top = 80.0
+offset_right = 476.0
+offset_bottom = 604.0
+
+[node name="CodeValueLabel" type="Label" parent="Screen2"]
+layout_mode = 0
+offset_left = 711.0
+offset_top = 98.0
+offset_right = 988.0
+offset_bottom = 209.0
+scale = Vector2(0.9719091, 1.1351768)
+text = "123456"
+label_settings = SubResource("LabelSettings_5p55f")
+
+[connection signal="button_down" from="Screen1/CreateGameButton" to="." method="_on_create_game_button_down"]
