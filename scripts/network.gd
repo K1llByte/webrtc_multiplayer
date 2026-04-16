@@ -25,8 +25,8 @@ func _process(_delta):
 	#for peer_conn in connected_peers.values():
 	#	var conn: WebRTCPeerConnection = peer_conn
 	#	print("From peer %s connection to ??? is in state %s" % [self.peer_id, conn.get_connection_state()])
-		
-	
+
+
 	while ws.get_available_packet_count() > 0:
 		var packet = ws.get_packet().get_string_from_utf8()
 		var msg = JSON.parse_string(packet)
@@ -36,16 +36,16 @@ func _process(_delta):
 		
 		match msg.get("type", ""):
 			"lobby_code":
-				print("> Received Lobby packet in %s" % str(peer_id))
+				#print("> Received Lobby packet in %s" % str(peer_id))
 				handle_lobby_code(msg["value"])
 			"offer":
-				print("> Received Offer packet in %s" % str(peer_id))
+				#print("> Received Offer packet in %s" % str(peer_id))
 				handle_offer(msg)
 			"answer":
-				print("> Received Answer packet in %s" % str(peer_id))
+				#print("> Received Answer packet in %s" % str(peer_id))
 				handle_answer(msg)
 			"ice":
-				print("> Received Ice packet in %s" % str(peer_id))
+				#print("> Received Ice packet in %s" % str(peer_id))
 				handle_ice(msg)
 	
 	if ws.get_ready_state() == WebSocketPeer.STATE_CLOSING:
@@ -53,7 +53,7 @@ func _process(_delta):
 
 
 func create_lobby() -> Variant:
-	var err = ws.connect_to_url("wss://%s/create" % LOBBY_SERVER_URL)
+	var err = ws.connect_to_url("ws://%s/create" % LOBBY_SERVER_URL)
 	if err != OK:
 		print("WebSocket connection failed: ", err)
 		return;
@@ -122,22 +122,30 @@ func handle_lobby_code(code: String):
 
 # Host will receive connection offers from clients
 func handle_offer(msg):
+	if msg["to"] != self.peer_id: 
+		return
+	
 	var from_id = int(msg["from"])
 	if not connected_peers.has(from_id):
 		create_peer_connection(from_id)
 
 	var peer_conn = connected_peers[from_id]
 	peer_conn.set_remote_description("offer", msg["sdp"])
-	#peer_conn.create_offer()
 
 
 # Client will receive connection answers from host
 func handle_answer(msg):
+	if msg["to"] != self.peer_id: 
+		return
+	
 	var peer_conn = connected_peers[int(msg["from"])]
 	peer_conn.set_remote_description("answer", msg["sdp"])
 
 
 func handle_ice(msg):
+	if msg["to"] != self.peer_id: 
+		return
+	
 	var peer_conn = connected_peers[int(msg["from"])]
 	peer_conn.add_ice_candidate(msg["mid"], msg["index"], msg["candidate"])
 
@@ -161,11 +169,11 @@ func create_peer_connection(id: int):
 
 
 func send_signal(data: Dictionary):
-	print("%s WS state: %s" % [str(self.peer_id), str(ws.get_ready_state())])
-	
 	var json = JSON.stringify(data)
-	print("> Sent %s packet from %s" % [data["type"], str(peer_id)])
 	ws.send_text(json)
+	
+func is_host() -> bool:
+	return multiplayer.is_server()
 
 ################################################################################
 # Signal handlers
