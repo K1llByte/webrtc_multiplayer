@@ -1,6 +1,14 @@
 extends Control
 
+################################################################################
+# Data
+################################################################################
+
 var players: Dictionary = {}
+
+################################################################################
+# Implementations
+################################################################################
 
 func fill_connected_peers():
 	#print(multiplayer.get_peers())
@@ -20,6 +28,22 @@ func player_name() -> String:
 		return "player%d" % Network.peer_id
 	return $Screen1/UsernameInput.text
 
+# Server will send list of all players and fill connected player list
+@rpc("authority", "call_local", "reliable")
+func sync_players(new_players):
+	players = new_players
+	fill_connected_peers()
+
+
+@rpc("any_peer", "reliable")
+func add_player(peer_id: int, player_name: String):
+	players[peer_id] = player_name
+	if Network.is_host():
+		sync_players.rpc(players)
+
+################################################################################
+# Signal handlers
+################################################################################
 
 func _on_connected_peer(peer_id: int):
 	if Network.is_host():
@@ -38,33 +62,16 @@ func _on_connected_to_host(peer_id: int):
 		add_player.rpc(Network.peer_id, player_name())
 
 
-# Server will send list of all players and fill connected player list
-@rpc("authority", "call_local", "reliable")
-func sync_players(new_players):
-	players = new_players
-	fill_connected_peers()
-
-
-@rpc("any_peer", "reliable")
-func add_player(peer_id: int, player_name: String):
-	players[peer_id] = player_name
-	if Network.is_host():
-		sync_players.rpc(players)
-
-
 func _on_create_game_button_down():
 	Network.lobby_created.connect(_on_lobby_created)
 	Network.create_lobby()
 
 
 func _on_join_game_button_down():
-	Network.lobby_created.connect(_on_lobby_joined)
+	Network.lobby_joined.connect(_on_lobby_joined)
 	var lobby_code = $Screen1/GameCodeInput.text
 	Network.join_lobby(lobby_code)
-	
-	# TODO: turn this into a signal once the client has fully connected to
-	# server
-	_on_lobby_joined()
+
 
 func _on_lobby_created(lobby_code):
 	add_player(Network.peer_id, player_name())
@@ -81,13 +88,13 @@ func _on_lobby_created(lobby_code):
 	Network.lobby_created.disconnect(_on_lobby_created)
 
 
-func _on_lobby_joined():
+func _on_lobby_joined(lobby_code: String):
 	$Screen1.hide()
 	$Screen2.show()
 	$Screen2/CodeValueLabel.text = $Screen1/GameCodeInput.text
 	multiplayer.peer_connected.connect(_on_connected_to_host)
 	
-	#Network.lobby_joined.disconnect(_on_lobby_joined)
+	Network.lobby_joined.disconnect(_on_lobby_joined)
 
 
 func _on_copy_clipboard_button_down() -> void:

@@ -11,11 +11,14 @@ var webrtc_peer := WebRTCMultiplayerPeer.new()
 var peer_id := randi_range(2, 2147483647)
 var connected_peers := {}
 
+var _waiting_to_join_lobby = false
+
 const HOST_ID := 1
-#const LOBBY_SERVER_URL := "127.0.0.1:8787"
+#const LOBBY_SERVER_URL := "192.168.1.156"
 const LOBBY_SERVER_URL := "lobbyserver.killbyte.dev"
 
 signal lobby_created(lobby_code: String)
+signal lobby_joined(lobby_code: String)
 
 ################################################################################
 # Implementations
@@ -23,6 +26,11 @@ signal lobby_created(lobby_code: String)
 
 func _process(_delta):
 	ws.poll()
+	
+	if _waiting_to_join_lobby && ws.get_ready_state() == WebSocketPeer.STATE_OPEN:
+		start_webrtc_as_client()
+		self.lobby_joined.emit(self.lobby_code)
+		_waiting_to_join_lobby = false
 	
 	while ws.get_available_packet_count() > 0:
 		var packet = ws.get_packet().get_string_from_utf8()
@@ -33,16 +41,16 @@ func _process(_delta):
 		
 		match msg.get("type", ""):
 			"lobby_code":
-				#print("> Received Lobby packet in %s" % str(peer_id))
+				print("> Received Lobby packet in %s" % str(peer_id))
 				handle_lobby_code(msg["value"])
 			"offer":
-				#print("> Received Offer packet in %s" % str(peer_id))
+				print("> Received Offer packet in %s" % str(peer_id))
 				handle_offer(msg)
 			"answer":
-				#print("> Received Answer packet in %s" % str(peer_id))
+				print("> Received Answer packet in %s" % str(peer_id))
 				handle_answer(msg)
 			"ice":
-				#print("> Received Ice packet in %s" % str(peer_id))
+				print("> Received Ice packet in %s" % str(peer_id))
 				handle_ice(msg)
 	
 	if ws.get_ready_state() == WebSocketPeer.STATE_CLOSING:
@@ -55,35 +63,24 @@ func create_lobby():
 		print("WebSocket connection failed: ", err)
 		return;
 
-	print("Connected to lobby server")
-
 
 func join_lobby(lobby_code: String):
-	var err = ws.connect_to_url("wss://%s/join?lobby_code=%s" % [LOBBY_SERVER_URL, lobby_code])
+	var err = ws.connect_to_url("ws://%s/join?lobby_code=%s" % [LOBBY_SERVER_URL, lobby_code])
 	if err != OK:
 		print("WebSocket connection failed: ", err)
 		return;
-
-	print("Connected to lobby server %s" % lobby_code)
-	
-	while ws.get_ready_state() != WebSocketPeer.STATE_OPEN:
-		ws.poll()
-	start_webrtc_as_client()
 	self.lobby_code = lobby_code
+	
+	# TODO: Would be usefull to also connect ws.connection_error/connection_closed
+	_waiting_to_join_lobby = true
+
+	#while ws.get_ready_state() != WebSocketPeer.STATE_OPEN:
+	#	ws.poll()
+	#start_webrtc_as_client()
 
 
-#func receive_lobby_code() -> String:
-#	while true:
-#		ws.poll()
-#		while ws.get_available_packet_count() > 0:
-#			var packet = ws.get_packet().get_string_from_utf8()
-#			var msg = JSON.parse_string(packet)
-
-#			match msg.get("type", ""):
-#				"lobby_code":
-#					handle_lobby_code(msg["value"])
-#					return msg["value"]
-#	return ""
+func _on_ws_connected():
+	start_webrtc_as_client()
 
 
 func start_webrtc_as_host():
@@ -104,7 +101,6 @@ func start_webrtc_as_client():
 	var peer_conn = create_peer_connection(HOST_ID)
 	# Will create and send SDP packet to remote peer through
 	peer_conn.create_offer()
-	print("%s WS state: %s" % [str(self.peer_id), str(ws.get_ready_state())])
 
 
 func handle_lobby_code(code: String):
