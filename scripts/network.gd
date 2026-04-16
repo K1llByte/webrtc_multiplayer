@@ -58,14 +58,14 @@ func _process(_delta):
 
 
 func create_lobby():
-	var err = ws.connect_to_url("ws://%s/create" % LOBBY_SERVER_URL)
+	var err = ws.connect_to_url("wss://%s/create" % LOBBY_SERVER_URL)
 	if err != OK:
 		print("WebSocket connection failed: ", err)
 		return;
 
 
 func join_lobby(lobby_code: String):
-	var err = ws.connect_to_url("ws://%s/join?lobby_code=%s" % [LOBBY_SERVER_URL, lobby_code])
+	var err = ws.connect_to_url("wss://%s/join?lobby_code=%s" % [LOBBY_SERVER_URL, lobby_code])
 	if err != OK:
 		print("WebSocket connection failed: ", err)
 		return;
