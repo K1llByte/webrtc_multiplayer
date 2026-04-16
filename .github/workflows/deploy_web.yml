@@ -1,0 +1,57 @@
+name: Build Web Release
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest  
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y wget unzip xvfb
+
+      - name: Download Godot 4.6.2
+        run: |
+          wget https://github.com/godotengine/godot/releases/download/4.6.2-stable/Godot_v4.6.2-stable_linux.x86_64.zip
+          unzip Godot_v4.6.2-stable_linux.x86_64.zip
+          chmod +x Godot_v4.6.2-stable_linux.x86_64
+          mv Godot_v4.6.2-stable_linux.x86_64 godot
+
+      - name: Install export templates
+        run: |
+          wget https://github.com/godotengine/godot/releases/download/4.6.2-stable/Godot_v4.6.2-stable_export_templates.tpz
+          mkdir -p /tmp/godot_templates
+          unzip Godot_v4.6.2-stable_export_templates.tpz -d /tmp/godot_templates
+          mkdir -p ~/.local/share/godot/export_templates/4.6.2.stable
+          mv /tmp/godot_templates/templates/* ~/.local/share/godot/export_templates/4.6.2.stable/
+
+      - name: Create build directories
+        run: |
+          mkdir -p build/web
+
+      - name: Export Web build
+        run: |
+          ./godot --headless --export-release "WebRtcLobbyWeb" build/web/index.html
+
+      - name: Prepare release contents
+        run: |
+          mkdir -p /tmp/release
+          cp -r build /tmp/release/
+
+      - name: Deploy
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: build
+          single-commit: true

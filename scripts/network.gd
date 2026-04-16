@@ -8,26 +8,75 @@ var ws := WebSocketPeer.new()
 var lobby_code: String
 # WebRTC
 var webrtc_peer := WebRTCMultiplayerPeer.new()
-var peer_id: int
+var peer_id = randi_range(2, 2147483647)
+var connected_peers := {}
 
-const LOBBY_SERVER_URL := "lobby_server.killbyte.workers.dev"
-#var LOBBY_SERVER_URL := "192.168.1.156:8787"
+const HOST_ID := 1
+#const LOBBY_SERVER_URL := "127.0.0.1:8787"
+const LOBBY_SERVER_URL := "lobbyserver.killbyte.dev"
 
 ################################################################################
 # Implementations
 ################################################################################
+
+func _process(_delta):
+	ws.poll()
+	
+	#for peer_conn in connected_peers.values():
+	#	var conn: WebRTCPeerConnection = peer_conn
+	#	print("From peer %s connection to ??? is in state %s" % [self.peer_id, conn.get_connection_state()])
+		
+	
+	while ws.get_available_packet_count() > 0:
+		var packet = ws.get_packet().get_string_from_utf8()
+		var msg = JSON.parse_string(packet)
+		if msg == null:
+			print("Invalid message")
+			return
+		
+		match msg.get("type", ""):
+			"lobby_code":
+				print("> Received Lobby packet in %s" % str(peer_id))
+				handle_lobby_code(msg["value"])
+			"offer":
+				print("> Received Offer packet in %s" % str(peer_id))
+				handle_offer(msg)
+			"answer":
+				print("> Received Answer packet in %s" % str(peer_id))
+				handle_answer(msg)
+			"ice":
+				print("> Received Ice packet in %s" % str(peer_id))
+				handle_ice(msg)
+	
+	if ws.get_ready_state() == WebSocketPeer.STATE_CLOSING:
+		print("Disconnected from lobby server")
 
 
 func create_lobby() -> Variant:
 	var err = ws.connect_to_url("wss://%s/create" % LOBBY_SERVER_URL)
 	if err != OK:
 		print("WebSocket connection failed: ", err)
-	else:
-		print("Connected to lobby server")
+		return;
+
+	print("Connected to lobby server")
 
 	var lobby_code = receive_lobby_code()
-	#start_webrtc_as_host()
+	start_webrtc_as_host()
 	return lobby_code
+
+
+func join_lobby(lobby_code: String):
+	var err = ws.connect_to_url("wss://%s/join?lobby_code=%s" % [LOBBY_SERVER_URL, lobby_code])
+	if err != OK:
+		print("WebSocket connection failed: ", err)
+		return;
+
+	print("Connected to lobby server %s" % lobby_code)
+	
+	while ws.get_ready_state() != WebSocketPeer.STATE_OPEN:
+		ws.poll()
+	start_webrtc_as_client()
+	self.lobby_code = lobby_code
 
 
 func receive_lobby_code() -> String:
@@ -46,53 +95,24 @@ func receive_lobby_code() -> String:
 
 func start_webrtc_as_host():
 	print("Starting WebRTC host")
-
+	
 	webrtc_peer.create_server()
-	# Host should always be 1
-	peer_id = 1
-
 	multiplayer.multiplayer_peer = webrtc_peer
-
-	# Create local offer (Godot handles internally)
-	#var offer = webrtc_peer.create_offer(peer_id)
-
-	#send_signal({
-		#"type": "offer",
-		#"data": offer
-	#})
-
-func join_lobby(lobby_code: String):
-	#var err = ws.connect_to_url("wss://lobby_server.killbyte.workers.dev/join?lobby_code=%s" % lobby_code)
-	var err = ws.connect_to_url("wss://%s/join?lobby_code=%s" % [LOBBY_SERVER_URL, lobby_code])
 	
-	if err != OK:
-		print("WebSocket connection failed: ", err)
-	else:
-		print("Connected to lobby server %s" % lobby_code)
+	self.peer_id = HOST_ID
+	print("%s WS state: %s" % [str(self.peer_id), str(ws.get_ready_state())])
 
 
-func _process(_delta):
-	ws.poll()
+func start_webrtc_as_client():
+	print("Starting WebRTC client")
 	
-	while ws.get_available_packet_count() > 0:
-		var packet = ws.get_packet().get_string_from_utf8()
-		var msg = JSON.parse_string(packet)
-		if msg == null:
-			print("Invalid message")
-			return
-
-		match msg.get("type", ""):
-			"lobby_code":
-				handle_lobby_code(msg["value"])
-			"offer":
-				handle_offer(msg["data"])
-			"answer":
-				handle_answer(msg["data"])
-			"ice":
-				handle_ice(msg["data"])
+	webrtc_peer.create_client(peer_id)
+	multiplayer.multiplayer_peer = webrtc_peer
 	
-	if ws.get_ready_state() == WebSocketPeer.STATE_CLOSING:
-		print("Disconnected from lobby server")
+	var peer_conn = create_peer_connection(HOST_ID)
+	# Will create and send SDP packet to remote peer through
+	peer_conn.create_offer()
+	print("%s WS state: %s" % [str(self.peer_id), str(ws.get_ready_state())])
 
 
 func handle_lobby_code(code: String):
@@ -100,51 +120,74 @@ func handle_lobby_code(code: String):
 	lobby_code = code
 
 
-func handle_answer(answer):
-	print("Received answer")
-	webrtc_peer.set_remote_description(1, answer)
+# Host will receive connection offers from clients
+func handle_offer(msg):
+	var from_id = int(msg["from"])
+	if not connected_peers.has(from_id):
+		create_peer_connection(from_id)
+
+	var peer_conn = connected_peers[from_id]
+	peer_conn.set_remote_description("offer", msg["sdp"])
+	#peer_conn.create_offer()
 
 
-func start_as_client():
-	print("Waiting for offer...")
+# Client will receive connection answers from host
+func handle_answer(msg):
+	var peer_conn = connected_peers[int(msg["from"])]
+	peer_conn.set_remote_description("answer", msg["sdp"])
 
 
-func handle_offer(offer):
-	print("Received offer")
+func handle_ice(msg):
+	var peer_conn = connected_peers[int(msg["from"])]
+	peer_conn.add_ice_candidate(msg["mid"], msg["index"], msg["candidate"])
 
-	webrtc_peer.create_mesh(peer_id)
-	webrtc_peer.set_remote_description(1, offer)
 
-	var answer = webrtc_peer.create_answer(peer_id)
-
-	send_signal({
-		"type": "answer",
-		"data": answer
+func create_peer_connection(id: int):
+	var peer_conn = WebRTCPeerConnection.new()
+	peer_conn.initialize({
+		"iceServers": [
+			{ "urls": ["stun:stun.l.google.com:19302"] }
+		]
 	})
-
-
-func handle_ice(candidate):
-	self.webrtc_peer.add_ice_candidate(1, candidate)
-
-
-#func create_peer():
-	#var peer_conn = WebRTCPeerConnection.new()
-	#peer_conn.initialize({
-		#"iceServers": [
-			#{ "urls": ["stun:stun.l.google.com:19302"] }
-		#]
-	#})
-	#
-	#self.webrtc_peer.add_peer(peer_conn, self.peer_id)
-
-
-func offer_created():
-	pass
+	
+	# Signal is emmited after calling create_offer() or set_remote_description()
+	peer_conn.session_description_created.connect(_on_sdp_created.bind(id))
+	# Signal is emmited when a new ICE candidate has been created
+	peer_conn.ice_candidate_created.connect(_on_ice_created.bind(id))
+	
+	self.webrtc_peer.add_peer(peer_conn, id)
+	connected_peers[id] = peer_conn
+	return peer_conn
 
 
 func send_signal(data: Dictionary):
+	print("%s WS state: %s" % [str(self.peer_id), str(ws.get_ready_state())])
+	
 	var json = JSON.stringify(data)
+	print("> Sent %s packet from %s" % [data["type"], str(peer_id)])
 	ws.send_text(json)
 
-func is_host():
-	pass
+################################################################################
+# Signal handlers
+################################################################################
+
+func _on_sdp_created(type, sdp, id):
+	var peer_conn = connected_peers[id]
+	peer_conn.set_local_description(type, sdp)
+	send_signal({
+		"type": type,
+		"to": id,
+		"from": peer_id,
+		"sdp": sdp
+	})
+
+
+func _on_ice_created(mid, index, candidate, id):
+	send_signal({
+		"type": "ice",
+		"to": id,
+		"from": peer_id,
+		"candidate": candidate,
+		"mid": mid,
+		"index": index
+	})
