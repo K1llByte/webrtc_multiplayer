@@ -8,12 +8,14 @@ var ws := WebSocketPeer.new()
 var lobby_code: String
 # WebRTC
 var webrtc_peer := WebRTCMultiplayerPeer.new()
-var peer_id = randi_range(2, 2147483647)
+var peer_id := randi_range(2, 2147483647)
 var connected_peers := {}
 
 const HOST_ID := 1
 #const LOBBY_SERVER_URL := "127.0.0.1:8787"
 const LOBBY_SERVER_URL := "lobbyserver.killbyte.dev"
+
+signal lobby_created(lobby_code: String)
 
 ################################################################################
 # Implementations
@@ -22,11 +24,6 @@ const LOBBY_SERVER_URL := "lobbyserver.killbyte.dev"
 func _process(_delta):
 	ws.poll()
 	
-	#for peer_conn in connected_peers.values():
-	#	var conn: WebRTCPeerConnection = peer_conn
-	#	print("From peer %s connection to ??? is in state %s" % [self.peer_id, conn.get_connection_state()])
-
-
 	while ws.get_available_packet_count() > 0:
 		var packet = ws.get_packet().get_string_from_utf8()
 		var msg = JSON.parse_string(packet)
@@ -52,17 +49,13 @@ func _process(_delta):
 		print("Disconnected from lobby server")
 
 
-func create_lobby() -> Variant:
+func create_lobby():
 	var err = ws.connect_to_url("ws://%s/create" % LOBBY_SERVER_URL)
 	if err != OK:
 		print("WebSocket connection failed: ", err)
 		return;
 
 	print("Connected to lobby server")
-
-	var lobby_code = receive_lobby_code()
-	start_webrtc_as_host()
-	return lobby_code
 
 
 func join_lobby(lobby_code: String):
@@ -79,18 +72,18 @@ func join_lobby(lobby_code: String):
 	self.lobby_code = lobby_code
 
 
-func receive_lobby_code() -> String:
-	while true:
-		ws.poll()
-		while ws.get_available_packet_count() > 0:
-			var packet = ws.get_packet().get_string_from_utf8()
-			var msg = JSON.parse_string(packet)
+#func receive_lobby_code() -> String:
+#	while true:
+#		ws.poll()
+#		while ws.get_available_packet_count() > 0:
+#			var packet = ws.get_packet().get_string_from_utf8()
+#			var msg = JSON.parse_string(packet)
 
-			match msg.get("type", ""):
-				"lobby_code":
-					handle_lobby_code(msg["value"])
-					return msg["value"]
-	return ""
+#			match msg.get("type", ""):
+#				"lobby_code":
+#					handle_lobby_code(msg["value"])
+#					return msg["value"]
+#	return ""
 
 
 func start_webrtc_as_host():
@@ -100,7 +93,6 @@ func start_webrtc_as_host():
 	multiplayer.multiplayer_peer = webrtc_peer
 	
 	self.peer_id = HOST_ID
-	print("%s WS state: %s" % [str(self.peer_id), str(ws.get_ready_state())])
 
 
 func start_webrtc_as_client():
@@ -117,7 +109,9 @@ func start_webrtc_as_client():
 
 func handle_lobby_code(code: String):
 	print("Received lobby_code: ", code)
-	lobby_code = code
+	self.lobby_code = code
+	start_webrtc_as_host()
+	lobby_created.emit(self.lobby_code)
 
 
 # Host will receive connection offers from clients

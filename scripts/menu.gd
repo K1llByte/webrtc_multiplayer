@@ -10,6 +10,8 @@ func fill_connected_peers():
 		if Network.peer_id == peer_id:
 			$Screen2/ItemList.add_item("* %s" % players[peer_id])
 		else:
+			print_debug("peer_id ", peer_id)
+			print_debug("Network.peer_id ", Network.peer_id)
 			$Screen2/ItemList.add_item(players[peer_id])
 
 
@@ -46,13 +48,25 @@ func sync_players(new_players):
 @rpc("any_peer", "reliable")
 func add_player(peer_id: int, player_name: String):
 	players[peer_id] = player_name
-	print_debug("> %d IS SETTING NAME '%s' FOR %d" % [Network.peer_id, player_name, peer_id])
 	if Network.is_host():
 		sync_players.rpc(players)
 
 
 func _on_create_game_button_down():
-	var lobby_code = Network.create_lobby()
+	Network.lobby_created.connect(_on_lobby_created)
+	Network.create_lobby()
+
+
+func _on_join_game_button_down():
+	Network.lobby_created.connect(_on_lobby_joined)
+	var lobby_code = $Screen1/GameCodeInput.text
+	Network.join_lobby(lobby_code)
+	
+	# TODO: turn this into a signal once the client has fully connected to
+	# server
+	_on_lobby_joined()
+
+func _on_lobby_created(lobby_code):
 	add_player(Network.peer_id, player_name())
 	
 	$Screen1.hide()
@@ -63,17 +77,17 @@ func _on_create_game_button_down():
 	
 	multiplayer.peer_connected.connect(_on_connected_peer)
 	multiplayer.peer_disconnected.connect(_on_disconnected_peer)
-
-
-func _on_join_game_button_down():
-	var lobby_code = $Screen1/GameCodeInput.text
-	Network.join_lobby(lobby_code)
 	
+	Network.lobby_created.disconnect(_on_lobby_created)
+
+
+func _on_lobby_joined():
 	$Screen1.hide()
 	$Screen2.show()
-	$Screen2/CodeValueLabel.text = lobby_code
+	$Screen2/CodeValueLabel.text = $Screen1/GameCodeInput.text
 	multiplayer.peer_connected.connect(_on_connected_to_host)
-
+	
+	#Network.lobby_joined.disconnect(_on_lobby_joined)
 
 
 func _on_copy_clipboard_button_down() -> void:
