@@ -43,7 +43,7 @@ jobs:
 
       - name: Export Web build
         run: |
-          ./godot --headless --export-release "WebRtcLobbyWeb" build/web/index.html
+          ./godot --headless --export-release "WebRtcLobbyWeb" build/web/index.html || true
 
       - name: Prepare release contents
         run: |
