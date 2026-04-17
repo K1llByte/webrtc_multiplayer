@@ -74,10 +74,6 @@ func join_lobby(lobby_code: String):
 	# TODO: Would be usefull to also connect ws.connection_error/connection_closed
 	_waiting_to_join_lobby = true
 
-	#while ws.get_ready_state() != WebSocketPeer.STATE_OPEN:
-	#	ws.poll()
-	#start_webrtc_as_client()
-
 
 func _on_ws_connected():
 	start_webrtc_as_client()
