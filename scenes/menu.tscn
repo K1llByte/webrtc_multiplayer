@@ -2,6 +2,9 @@
 
 [ext_resource type="Script" uid="uid://c27xwoegnbdrg" path="res://scripts/menu.gd" id="1_yqeox"]
 
+[sub_resource type="LabelSettings" id="LabelSettings_yqeox"]
+font_color = Color(0.9529412, 0.05882353, 0, 1)
+
 [sub_resource type="LabelSettings" id="LabelSettings_5p55f"]
 font_size = 81
 
@@ -50,6 +53,15 @@ offset_top = 116.0
 offset_right = 477.0
 offset_bottom = 215.0
 placeholder_text = "Username"
+
+[node name="ErrorLabel" type="Label" parent="Screen1" unique_id=324751089]
+layout_mode = 0
+offset_left = 340.0
+offset_top = 441.0
+offset_right = 716.0
+offset_bottom = 464.0
+label_settings = SubResource("LabelSettings_yqeox")
+horizontal_alignment = 1
 
 [node name="Screen2" type="Control" parent="." unique_id=1830690639]
 visible = false

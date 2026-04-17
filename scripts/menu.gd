@@ -18,8 +18,6 @@ func fill_connected_peers():
 		if Network.peer_id == peer_id:
 			$Screen2/ItemList.add_item("* %s" % players[peer_id])
 		else:
-			print_debug("peer_id ", peer_id)
-			print_debug("Network.peer_id ", Network.peer_id)
 			$Screen2/ItemList.add_item(players[peer_id])
 
 
@@ -64,13 +62,12 @@ func _on_connected_to_host(peer_id: int):
 
 func _on_create_game_button_down():
 	Network.lobby_created.connect(_on_lobby_created)
+	Network.lobby_create_failed.connect(_on_lobby_create_failed)
 	Network.create_lobby()
 
 
-func _on_join_game_button_down():
-	Network.lobby_joined.connect(_on_lobby_joined)
-	var lobby_code = $Screen1/GameCodeInput.text
-	Network.join_lobby(lobby_code)
+func _on_lobby_create_failed():
+	$Screen1/ErrorLabel.text = "Failed to create game"
 
 
 func _on_lobby_created(lobby_code):
@@ -86,6 +83,20 @@ func _on_lobby_created(lobby_code):
 	multiplayer.peer_disconnected.connect(_on_disconnected_peer)
 	
 	Network.lobby_created.disconnect(_on_lobby_created)
+	Network.lobby_create_failed.disconnect(_on_lobby_create_failed)
+	
+	Network.lobby_disconnected.connect(_on_lobby_disconnected)
+
+
+func _on_join_game_button_down():
+	Network.lobby_joined.connect(_on_lobby_joined)
+	Network.lobby_join_failed.connect(_on_lobby_join_failed)
+	var lobby_code = $Screen1/GameCodeInput.text
+	Network.join_lobby(lobby_code)
+
+
+func _on_lobby_join_failed():
+	$Screen1/ErrorLabel.text = "Failed to join game"
 
 
 func _on_lobby_joined(lobby_code: String):
@@ -95,6 +106,16 @@ func _on_lobby_joined(lobby_code: String):
 	multiplayer.peer_connected.connect(_on_connected_to_host)
 	
 	Network.lobby_joined.disconnect(_on_lobby_joined)
+	Network.lobby_join_failed.disconnect(_on_lobby_join_failed)
+	
+	Network.lobby_disconnected.connect(_on_lobby_disconnected)
+
+
+func _on_lobby_disconnected():
+	Network.lobby_disconnected.disconnect(_on_lobby_disconnected)
+	$Screen2.hide()
+	$Screen1.show()
+	$Screen1/ErrorLabel.text = "Disconnected from lobby"
 
 
 func _on_copy_clipboard_button_down() -> void:

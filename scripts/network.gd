@@ -1,39 +1,72 @@
 extends Node
 
 ################################################################################
+# Types
+################################################################################
+
+enum State {
+	OFFLINE,
+	JOINING_LOBBY,
+	CREATING_LOBBY,
+	IN_LOBBY,
+}
+
+################################################################################
 # Data
 ################################################################################
 
-var ws := WebSocketPeer.new()
-var lobby_code: String
-# WebRTC
+const HOST_ID := 1
+const LOBBY_SERVER_URL := "lobbyserver.killbyte.dev"
+
+var state := State.OFFLINE
+var ws_peer := WebSocketPeer.new()
 var webrtc_peer := WebRTCMultiplayerPeer.new()
+var lobby_code: String
 var peer_id := randi_range(2, 2147483647)
 var connected_peers := {}
 
-var _waiting_to_join_lobby = false
-
-const HOST_ID := 1
-#const LOBBY_SERVER_URL := "192.168.1.156"
-const LOBBY_SERVER_URL := "lobbyserver.killbyte.dev"
-
 signal lobby_created(lobby_code: String)
+signal lobby_create_failed
 signal lobby_joined(lobby_code: String)
+signal lobby_join_failed
+signal lobby_disconnected
 
 ################################################################################
 # Implementations
 ################################################################################
 
 func _process(_delta):
-	ws.poll()
+	ws_peer.poll()
 	
-	if _waiting_to_join_lobby && ws.get_ready_state() == WebSocketPeer.STATE_OPEN:
-		start_webrtc_as_client()
-		self.lobby_joined.emit(self.lobby_code)
-		_waiting_to_join_lobby = false
+	# Update lobby connection state
+	match state:
+		State.JOINING_LOBBY:
+			match ws_peer.get_ready_state():
+				WebSocketPeer.STATE_OPEN:
+					print("> Joined lobby")
+					start_webrtc_as_client()
+					self.state = State.IN_LOBBY
+					self.lobby_joined.emit(self.lobby_code)
+				WebSocketPeer.STATE_CLOSED:
+					print("> Failed to join lobby")
+					self.state = State.OFFLINE
+					self.lobby_join_failed.emit()
+		State.CREATING_LOBBY:
+			match ws_peer.get_ready_state():
+				WebSocketPeer.STATE_CLOSED:
+					print("> Failed to create lobby")
+					self.state = State.OFFLINE
+					self.lobby_create_failed.emit()
+		State.IN_LOBBY:
+			match ws_peer.get_ready_state():
+				WebSocketPeer.STATE_CLOSED:
+					print("> Disconnected")
+					self.state = State.OFFLINE
+					self.lobby_disconnected.emit()
+		
 	
-	while ws.get_available_packet_count() > 0:
-		var packet = ws.get_packet().get_string_from_utf8()
+	while ws_peer.get_available_packet_count() > 0:
+		var packet = ws_peer.get_packet().get_string_from_utf8()
 		var msg = JSON.parse_string(packet)
 		if msg == null:
 			print("Invalid message")
@@ -41,38 +74,36 @@ func _process(_delta):
 		
 		match msg.get("type", ""):
 			"lobby_code":
-				print("> Received Lobby packet in %s" % str(peer_id))
+				#print("> Received Lobby packet in %s" % str(peer_id))
 				handle_lobby_code(msg["value"])
 			"offer":
-				print("> Received Offer packet in %s" % str(peer_id))
+				#print("> Received Offer packet in %s" % str(peer_id))
 				handle_offer(msg)
 			"answer":
-				print("> Received Answer packet in %s" % str(peer_id))
+				#print("> Received Answer packet in %s" % str(peer_id))
 				handle_answer(msg)
 			"ice":
-				print("> Received Ice packet in %s" % str(peer_id))
+				#print("> Received Ice packet in %s" % str(peer_id))
 				handle_ice(msg)
-	
-	if ws.get_ready_state() == WebSocketPeer.STATE_CLOSING:
-		print("Disconnected from lobby server")
 
 
 func create_lobby():
-	var err = ws.connect_to_url("wss://%s/create" % LOBBY_SERVER_URL)
+	var err = ws_peer.connect_to_url("wss://%s/create" % LOBBY_SERVER_URL)
 	if err != OK:
 		print("WebSocket connection failed: ", err)
 		return;
+	
+	state = State.CREATING_LOBBY
 
 
 func join_lobby(lobby_code: String):
-	var err = ws.connect_to_url("wss://%s/join?lobby_code=%s" % [LOBBY_SERVER_URL, lobby_code])
+	var err = ws_peer.connect_to_url("wss://%s/join?lobby_code=%s" % [LOBBY_SERVER_URL, lobby_code])
 	if err != OK:
 		print("WebSocket connection failed: ", err)
 		return;
 	self.lobby_code = lobby_code
 	
-	# TODO: Would be usefull to also connect ws.connection_error/connection_closed
-	_waiting_to_join_lobby = true
+	state = State.JOINING_LOBBY
 
 
 func _on_ws_connected():
@@ -140,7 +171,18 @@ func create_peer_connection(id: int):
 	var peer_conn = WebRTCPeerConnection.new()
 	peer_conn.initialize({
 		"iceServers": [
-			{ "urls": ["stun:stun.l.google.com:19302"] }
+			{ "urls": [
+				"stun:stun.l.google.com:19302",
+				"stun:stun.l.google.com:5349",
+				"stun:stun1.l.google.com:3478",
+				"stun:stun1.l.google.com:5349",
+				"stun:stun2.l.google.com:19302",
+				"stun:stun2.l.google.com:5349",
+				"stun:stun3.l.google.com:3478",
+				"stun:stun3.l.google.com:5349",
+				"stun:stun4.l.google.com:19302",
+				"stun:stun4.l.google.com:5349",
+			] }
 		]
 	})
 	
@@ -156,7 +198,7 @@ func create_peer_connection(id: int):
 
 func send_signal(data: Dictionary):
 	var json = JSON.stringify(data)
-	ws.send_text(json)
+	ws_peer.send_text(json)
 	
 func is_host() -> bool:
 	return multiplayer.is_server()
