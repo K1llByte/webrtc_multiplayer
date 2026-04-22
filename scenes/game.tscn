@@ -1,0 +1,9 @@
+[gd_scene format=3 uid="uid://boqupvksv3mjs"]
+
+[ext_resource type="Script" uid="uid://b2bfqpkfgatcd" path="res://scripts/game.gd" id="1_uwrxv"]
+
+[node name="Game" type="Node2D" unique_id=1172424026]
+script = ExtResource("1_uwrxv")
+
+[node name="SpawnPoint" type="Node2D" parent="." unique_id=1097860811]
+position = Vector2(640, 360)

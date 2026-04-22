@@ -21,8 +21,11 @@ config/features=PackedStringArray("4.6", "Forward Plus")
 [autoload]
 
 Network="*res://scripts/network.gd"
+Game="*uid://dftk3edqpjpmh"
 
 [display]
 
+window/size/viewport_width=1280
+window/size/viewport_height=720
 window/stretch/mode="viewport"
 window/stretch/aspect="keep_height"

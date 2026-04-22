@@ -25,6 +25,8 @@ var lobby_code: String
 var peer_id := randi_range(2, 2147483647)
 var connected_peers := {}
 
+@export var max_players: int = 8
+
 signal lobby_created(lobby_code: String)
 signal lobby_create_failed
 signal lobby_joined(lobby_code: String)

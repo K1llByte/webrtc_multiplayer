@@ -4,21 +4,20 @@ extends Control
 # Data
 ################################################################################
 
-var players: Dictionary = {}
+var game_scene: PackedScene = preload("res://scenes/game.tscn")
 
 ################################################################################
 # Implementations
 ################################################################################
 
 func fill_connected_peers():
-	#print(multiplayer.get_peers())
 	$Screen2/ItemList.clear()
-	for pid in players.keys():
+	for pid in Game.players.keys():
 		var peer_id = int(pid)
 		if Network.peer_id == peer_id:
-			$Screen2/ItemList.add_item("* %s" % players[peer_id])
+			$Screen2/ItemList.add_item("* %s" % Game.players[peer_id])
 		else:
-			$Screen2/ItemList.add_item(players[peer_id])
+			$Screen2/ItemList.add_item(Game.players[peer_id])
 
 
 func player_name() -> String:
@@ -26,18 +25,19 @@ func player_name() -> String:
 		return "player%d" % Network.peer_id
 	return $Screen1/UsernameInput.text
 
+
 # Server will send list of all players and fill connected player list
 @rpc("authority", "call_local", "reliable")
 func sync_players(new_players):
-	players = new_players
+	Game.players = new_players
 	fill_connected_peers()
 
 
 @rpc("any_peer", "reliable")
 func add_player(peer_id: int, player_name: String):
-	players[peer_id] = player_name
+	Game.players[peer_id] = player_name
 	if Network.is_host():
-		sync_players.rpc(players)
+		sync_players.rpc(Game.players)
 
 ################################################################################
 # Signal handlers
@@ -45,14 +45,14 @@ func add_player(peer_id: int, player_name: String):
 
 func _on_connected_peer(peer_id: int):
 	if Network.is_host():
-		players[peer_id] = "username%d" % peer_id
-		sync_players.rpc(players)
+		Game.players[peer_id] = "username%d" % peer_id
+		sync_players.rpc(Game.players)
 
 
 func _on_disconnected_peer(peer_id: int):
 	if Network.is_host():
-		players.erase(peer_id)
-		sync_players.rpc(players)
+		Game.players.erase(peer_id)
+		sync_players.rpc(Game.players)
 
 
 func _on_connected_to_host(peer_id: int):
@@ -75,6 +75,7 @@ func _on_lobby_created(lobby_code):
 	
 	$Screen1.hide()
 	$Screen2.show()
+	$Screen2/StartGameButton.visible = Network.is_host()
 	$Screen2/CodeValueLabel.text = lobby_code
 	# Add self to list of players
 	fill_connected_peers()
@@ -102,6 +103,7 @@ func _on_lobby_join_failed():
 func _on_lobby_joined(lobby_code: String):
 	$Screen1.hide()
 	$Screen2.show()
+	$Screen2/StartGameButton.visible = Network.is_host()
 	$Screen2/CodeValueLabel.text = $Screen1/GameCodeInput.text
 	multiplayer.peer_connected.connect(_on_connected_to_host)
 	
@@ -120,3 +122,12 @@ func _on_lobby_disconnected():
 
 func _on_copy_clipboard_button_down() -> void:
 	DisplayServer.clipboard_set($Screen2/CodeValueLabel.text)
+
+
+func _on_start_game_button_down() -> void:
+	start_game.rpc()
+
+
+@rpc("authority", "call_local")
+func start_game():
+	get_tree().change_scene_to_packed(game_scene)
