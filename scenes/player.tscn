@@ -3,10 +3,11 @@
 [node name="Player" type="Node2D" unique_id=178286008]
 
 [node name="Label" type="Label" parent="." unique_id=84772068]
-offset_left = -39.0
-offset_top = -11.0
-offset_right = 41.0
-offset_bottom = 12.0
+offset_left = -111.0
+offset_top = 45.0
+offset_right = 118.274994
+offset_bottom = 68.0
+theme_override_colors/font_color = Color(0, 0, 0, 1)
 text = "Username"
 horizontal_alignment = 1
 vertical_alignment = 1

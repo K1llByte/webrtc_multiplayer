@@ -98,12 +98,12 @@ func create_lobby():
 	state = State.CREATING_LOBBY
 
 
-func join_lobby(lobby_code: String):
-	var err = ws_peer.connect_to_url("wss://%s/join?lobby_code=%s" % [LOBBY_SERVER_URL, lobby_code])
+func join_lobby(code: String):
+	var err = ws_peer.connect_to_url("wss://%s/join?lobby_code=%s" % [LOBBY_SERVER_URL, code])
 	if err != OK:
 		print("WebSocket connection failed: ", err)
 		return;
-	self.lobby_code = lobby_code
+	self.lobby_code = code
 	
 	state = State.JOINING_LOBBY
 

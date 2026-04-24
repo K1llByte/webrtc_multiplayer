@@ -6,20 +6,27 @@ extends Control
 
 var game_scene: PackedScene = preload("res://scenes/game.tscn")
 
+@export var min_players: int = 2
+
 ################################################################################
 # Implementations
 ################################################################################
 
+func _ready():
+	$Screen2/StartGameButton.disabled = true
+
+
+# Fills menu item list with connected player names 
 func fill_connected_peers():
 	$Screen2/ItemList.clear()
-	for pid in Game.players.keys():
-		var peer_id = int(pid)
+	for peer_id in Game.players:
 		if Network.peer_id == peer_id:
-			$Screen2/ItemList.add_item("* %s" % Game.players[peer_id])
+			$Screen2/ItemList.add_item("* %s" % Game.players_data[peer_id])
 		else:
-			$Screen2/ItemList.add_item(Game.players[peer_id])
+			$Screen2/ItemList.add_item(Game.players_data[peer_id])
 
 
+# Get player name from the input
 func player_name() -> String:
 	if $Screen1/UsernameInput.text.is_empty():
 		return "player%d" % Network.peer_id
@@ -28,16 +35,19 @@ func player_name() -> String:
 
 # Server will send list of all players and fill connected player list
 @rpc("authority", "call_local", "reliable")
-func sync_players(new_players):
-	Game.players = new_players
+func sync_players(new_players_data: Dictionary[int, String]):
+	# NOTE: Weird element wise casting
+	Game.players = new_players_data.keys()
+	Game.players_data = new_players_data
 	fill_connected_peers()
 
 
 @rpc("any_peer", "reliable")
 func add_player(peer_id: int, player_name: String):
-	Game.players[peer_id] = player_name
+	Game.players.append(peer_id)
+	Game.players_data[peer_id] = player_name
 	if Network.is_host():
-		sync_players.rpc(Game.players)
+		sync_players.rpc(Game.players_data)
 
 ################################################################################
 # Signal handlers
@@ -45,14 +55,22 @@ func add_player(peer_id: int, player_name: String):
 
 func _on_connected_peer(peer_id: int):
 	if Network.is_host():
-		Game.players[peer_id] = "username%d" % peer_id
-		sync_players.rpc(Game.players)
+		Game.players.append(peer_id)
+		Game.players_data[peer_id] = "username%d" % peer_id
+		sync_players.rpc(Game.players_data)
+		# Update Start Game button visibility
+		if Game.players.size() >= self.min_players:
+			$Screen2/StartGameButton.disabled = false
 
 
 func _on_disconnected_peer(peer_id: int):
 	if Network.is_host():
 		Game.players.erase(peer_id)
-		sync_players.rpc(Game.players)
+		Game.players_data.erase(peer_id)
+		sync_players.rpc(Game.players_data)
+		# Update Start Game button visibility
+		if Game.players.size() < self.min_players:
+			$Screen2/StartGameButton.disabled = true
 
 
 func _on_connected_to_host(peer_id: int):
@@ -120,11 +138,11 @@ func _on_lobby_disconnected():
 	$Screen1/ErrorLabel.text = "Disconnected from lobby"
 
 
-func _on_copy_clipboard_button_down() -> void:
+func _on_copy_clipboard_button_down():
 	DisplayServer.clipboard_set($Screen2/CodeValueLabel.text)
 
 
-func _on_start_game_button_down() -> void:
+func _on_start_game_button_down():
 	start_game.rpc()
 
 

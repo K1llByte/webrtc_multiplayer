@@ -4,9 +4,7 @@ extends Node
 # Data
 ################################################################################
 
-var players: Dictionary = {}
-
-#enum GameState {
-	#IN_LOBBY,
-	#GAME_IN_PROGRESS, 
-#}
+# Peer ids of connected players
+var players: Array[int] = []
+# Key is peer id and value is player name
+var players_data: Dictionary[int, String] = {}
