@@ -6,8 +6,6 @@ extends Control
 
 var game_scene: PackedScene = preload("res://scenes/game.tscn")
 
-@export var min_players: int = 2
-
 ################################################################################
 # Implementations
 ################################################################################
@@ -36,16 +34,14 @@ func player_name() -> String:
 # Server will send list of all players and fill connected player list
 @rpc("authority", "call_local", "reliable")
 func sync_players(new_players_data: Dictionary[int, String]):
-	# NOTE: Weird element wise casting
 	Game.players = new_players_data.keys()
 	Game.players_data = new_players_data
 	fill_connected_peers()
 
 
 @rpc("any_peer", "reliable")
-func add_player(peer_id: int, player_name: String):
-	Game.players.append(peer_id)
-	Game.players_data[peer_id] = player_name
+func add_player(peer_id: int, plr_name: String):
+	Game.add_player(peer_id, plr_name)
 	if Network.is_host():
 		sync_players.rpc(Game.players_data)
 
@@ -53,23 +49,19 @@ func add_player(peer_id: int, player_name: String):
 # Signal handlers
 ################################################################################
 
-func _on_connected_peer(peer_id: int):
+func _on_connected_peer(_peer_id: int):
 	if Network.is_host():
-		Game.players.append(peer_id)
-		Game.players_data[peer_id] = "username%d" % peer_id
 		sync_players.rpc(Game.players_data)
 		# Update Start Game button visibility
-		if Game.players.size() >= self.min_players:
+		if Game.players.size() >= Game.MIN_NUM_PLAYERS:
 			$Screen2/StartGameButton.disabled = false
 
 
-func _on_disconnected_peer(peer_id: int):
+func _on_disconnected_peer(_peer_id: int):
 	if Network.is_host():
-		Game.players.erase(peer_id)
-		Game.players_data.erase(peer_id)
 		sync_players.rpc(Game.players_data)
 		# Update Start Game button visibility
-		if Game.players.size() < self.min_players:
+		if Game.players.size() < Game.MIN_NUM_PLAYERS:
 			$Screen2/StartGameButton.disabled = true
 
 
@@ -118,7 +110,7 @@ func _on_lobby_join_failed():
 	$Screen1/ErrorLabel.text = "Failed to join game"
 
 
-func _on_lobby_joined(lobby_code: String):
+func _on_lobby_joined(_lobby_code: String):
 	$Screen1.hide()
 	$Screen2.show()
 	$Screen2/StartGameButton.visible = Network.is_host()

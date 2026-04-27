@@ -18,7 +18,7 @@ shader_parameter/number_of_images = Vector2(1, 1)
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_6u4wf"]
 size = Vector2(81.41592, 119.15929)
 
-[node name="Card" type="Node2D" unique_id=1429753082]
+[node name="Card" type="Node2D" unique_id=1429753082 groups=["card"]]
 scale = Vector2(0.565, 0.565)
 script = ExtResource("1_6u4wf")
 

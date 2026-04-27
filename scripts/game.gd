@@ -22,8 +22,9 @@ enum PlayerAction {
 # Data
 ################################################################################
 
-var card_scene = preload("res://scenes/card.tscn")
-var player_scene = preload("res://scenes/player.tscn")
+var card_scene: PackedScene = preload("res://scenes/card.tscn")
+var player_scene: PackedScene = preload("res://scenes/player.tscn")
+var menu_scene: PackedScene = preload("res://scenes/menu.tscn")
 
 # Current turn by player index (can be indexed from Game.players).
 # This value starts at -1 so when set_next_player_turn is called for the first
@@ -38,7 +39,7 @@ var state: GameState
 # By default host is always ready and this data should be ignored by other
 # players.
 var ready_players_count := 1
-var round := 0
+var game_round := 0
 
 @export var spawner_ellipse_width: float = 400.0
 @export var spawner_ellipse_height: float = 225.0
@@ -48,6 +49,7 @@ var round := 0
 ################################################################################
 
 func _ready():
+	multiplayer.peer_disconnected.connect(_on_player_disconnected)
 	$ActionButtons.hide()
 	if !Network.is_host():
 		self.state = GameState.WAITING_DECK
@@ -77,7 +79,11 @@ func setup_game():
 func sync_game_setup(new_deck: Array[int], player_id_to_card_value: Dictionary[int, int]):
 	spawn_players()
 	self.deck = new_deck
-	set_player_cards(player_id_to_card_value)
+	# Set player cards
+	for player_id in player_id_to_card_value.keys():
+		var player_node = self.player_id_to_node[player_id]
+		player_node.set_card(player_id_to_card_value[player_id])
+	
 	set_next_player_turn()
 	update_deck_label()
 	self.state = GameState.IN_PROGRESS
@@ -89,34 +95,16 @@ func update_deck_label():
 	label.text = "%d/%d" % [self.deck.size(), (num_rounds * Game.players.size())]
 
 
-func remove_card_from_player_node(player_id):
-	for child in self.player_id_to_node[player_id].get_children():
-		# NOTE: Suboptimal str check but fine for now
-		if child.is_in_group("card"):
-			child.queue_free()
-
-
-func set_player_cards(player_id_to_card_value: Dictionary[int, int]):
-	for player_id in player_id_to_card_value.keys():
-		var card_node = create_card_node_from_value(
-			player_id_to_card_value[player_id],
-			player_id != Network.peer_id
-		)
-		remove_card_from_player_node(player_id)
-		self.player_id_to_node[player_id].add_child(card_node)
-
-
-func _process(delta: float):
+func _process(_delta: float):
 	match self.state:
 		GameState.WAITING_PLAYERS_READY:
 			if self.ready_players_count == Game.players.size():
 				setup_game()
-				#start_game()
-				#self.state = GameState.WAITING_DECK
 				self.state = GameState.IN_PROGRESS
 			
 		GameState.IN_PROGRESS:
-			if is_my_turn():
+			# If is my turn
+			if Game.players[current_turn_player_idx] == Network.peer_id:
 				$ActionButtons.show()
 			else:
 				$ActionButtons.hide()
@@ -147,28 +135,24 @@ func spawn_players():
 		var x = spawner_ellipse_width * sin(t)
 		var y = spawner_ellipse_height * cos(t)
 		
-		var position = $SpawnPoint.global_position + Vector2(x, y)
+		var plr_position = $SpawnPoint.global_position + Vector2(x, y)
 		spawn_player(
-			position,
+			plr_position,
 			Game.players[player_i],
 			Game.players_data.values()[player_i]
 		)
 
 
-func spawn_player(position: Vector2, peer_id: int, name: String):
+func spawn_player(plr_position: Vector2, peer_id: int, plr_name: String):
 	var player_node: Node2D = player_scene.instantiate()
-	if peer_id == Network.peer_id:
-		player_node.get_node("Label").text = "* %s" % name
-	else:
-		player_node.get_node("Label").text = name
-	player_node.position = position
+	player_node.init(peer_id, plr_name)
+	player_node.position = plr_position
 	self.player_id_to_node[peer_id] = player_node
 	$Players.add_child(player_node)
 
 
 func create_card_node_from_value(card_value: int, down: bool = false) -> Node:
 	var card = card_scene.instantiate()
-	card.add_to_group("card")
 	card.init(card_value, down)
 	return card
 
@@ -178,7 +162,6 @@ func fetch_card_from_deck() -> Node:
 		return null
 	
 	var card = card_scene.instantiate()
-	card.add_to_group("card")
 	card.init(self.deck.pop_back())
 	return card
 
@@ -211,50 +194,30 @@ func draw_card_current():
 @rpc("any_peer", "call_local")
 func set_next_player_turn():
 	self.current_turn_player_idx = (self.current_turn_player_idx + 1) % Game.players.size()
-	print_debug("Current turn player id:", Game.players[self.current_turn_player_idx])
 	if self.current_turn_player_idx == 0:
-		self.round += 1
-		$RoundLabel.text = "Round %d" % self.round
+		self.game_round += 1
+		$RoundLabel.text = "Round %d" % self.game_round
 
 
 @rpc("any_peer", "call_local")
 func swap_current_player_card(target_player_id):
-	# Get current player card node
 	var current_player_id = Game.players[self.current_turn_player_idx]
 	var player_a_node = self.player_id_to_node[current_player_id]
-	# Get player_id card node
 	var player_b_node = self.player_id_to_node[target_player_id]
 	# Swap card values
-	var card_a_value: int = get_player_first_card_node(player_a_node).value
-	var card_b_value: int = get_player_first_card_node(player_b_node).value
-	remove_card_from_player_node(current_player_id)
-	remove_card_from_player_node(target_player_id)
-	var new_card_a_node = create_card_node_from_value(card_b_value, current_player_id != Network.peer_id)
-	var new_card_b_node = create_card_node_from_value(card_a_value, target_player_id != Network.peer_id)
-	player_a_node.add_child(new_card_a_node)
-	player_b_node.add_child(new_card_b_node)
+	player_a_node.swap_cards(player_b_node)
 	# Set next player turn
 	set_next_player_turn()
-
-
-func is_my_turn() -> bool:
-	return Game.players[current_turn_player_idx] == Network.peer_id
-
-
-func get_player_first_card_node(player_node: Node) -> Node:
-	print_debug(player_node.get_child_count())
-	for child in player_node.get_children():
-		# NOTE: Suboptimal str check but fine for now
-		if child.is_in_group("card"):
-			return child
-	return null
 
 
 # Setup all area signal handlers
 func enable_player_selection():
 	for player_id in self.player_id_to_node.keys():
+		# Don't allow selecting itself
+		if player_id == Game.players[self.current_turn_player_idx]:
+			continue
 		var player_node = self.player_id_to_node[player_id]
-		var card_node = get_player_first_card_node(player_node)
+		var card_node = player_node.get_card_node()
 		var card_area_node = card_node.find_child("Area2D")
 		card_area_node.input_event.connect(_on_card_area2d_input_event.bind(player_id, card_node))
 		card_area_node.mouse_entered.connect(set_card_border.bind(card_node, true))
@@ -263,8 +226,11 @@ func enable_player_selection():
 
 func disable_player_selection():
 	for player_id in self.player_id_to_node.keys():
+		# Don't allow selecting itself
+		if player_id == Game.players[self.current_turn_player_idx]:
+			continue
 		var player_node = self.player_id_to_node[player_id]
-		var card_node = get_player_first_card_node(player_node)
+		var card_node = player_node.get_card_node()
 		var card_area_node = card_node.find_child("Area2D")
 		card_area_node.input_event.disconnect(_on_card_area2d_input_event.bind(player_id, card_node))
 		card_area_node.mouse_entered.disconnect(set_card_border.bind(card_node, true))
@@ -288,8 +254,51 @@ func _on_swap_card_button_down():
 
 
 func _on_draw_new_card_button_down():
+	disable_player_selection()
 	draw_card_current.rpc()
 
 
 func _on_keep_card_button_down():
+	disable_player_selection()
 	set_next_player_turn.rpc()
+
+
+# Redistribute player nodes across the table in the their own preference.
+func respawn_players():
+	var num_players = Game.players.size()
+	var local_plr_idx = Game.players.find(Network.peer_id)
+	assert(local_plr_idx != -1)
+	
+	for i in range(num_players):
+		var player_i: int = (i + local_plr_idx) % num_players
+		var t = 2 * PI * i / num_players
+		var x = spawner_ellipse_width * sin(t)
+		var y = spawner_ellipse_height * cos(t)
+		
+		var plr_position = $SpawnPoint.global_position + Vector2(x, y)
+		
+		
+		self.player_id_to_node[Game.players[player_i]].position = plr_position
+
+
+func _on_player_disconnected(peer_id: int):
+	# If there are no longer enough players to continue game, go back to menu.
+	if Game.players.size() < Game.MIN_NUM_PLAYERS:
+		print("Gonna change scene")
+		assert(menu_scene != null)
+		# FIXME: For some reason Im not able to do here:
+		# get_tree().change_scene_to_packed(menu_scene)
+		get_tree().change_scene_to_file("res://scenes/menu.tscn")
+		return
+	
+	# Remove disconnected player node
+	self.player_id_to_node.erase(peer_id)
+	for player_node in $Players.get_children():
+		if player_node.player_id == peer_id:
+			player_node.queue_free()
+	
+	respawn_players()
+	
+	# Update game state to continue without the disconnected player
+	# NOTE: No need for rpc since every peer receives player disconnected event
+	self.current_turn_player_idx = self.current_turn_player_idx % Game.players.size()
