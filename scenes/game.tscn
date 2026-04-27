@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://boqupvksv3mjs"]
 
 [ext_resource type="Script" uid="uid://b2bfqpkfgatcd" path="res://scripts/game.gd" id="1_uwrxv"]
+[ext_resource type="PackedScene" uid="uid://dn6812iqeaqxh" path="res://scenes/card.tscn" id="2_yqjtg"]
 
 [node name="Game" type="Node2D" unique_id=1172424026]
 script = ExtResource("1_uwrxv")
@@ -14,23 +15,23 @@ position = Vector2(640, 360)
 layout_mode = 3
 anchors_preset = 0
 offset_left = 640.0
-offset_top = 485.0
+offset_top = 550.0
 offset_right = 680.0
-offset_bottom = 525.0
+offset_bottom = 590.0
 
 [node name="DrawNewCardButton" type="Button" parent="ActionButtons" unique_id=328644284]
 layout_mode = 0
 offset_left = 68.0
 offset_right = 166.75
 offset_bottom = 62.765
-text = "Draw New Card"
+text = "Draw"
 
 [node name="SwapCardButton" type="Button" parent="ActionButtons" unique_id=1945999611]
 layout_mode = 0
 offset_left = -164.0
 offset_right = -65.25
 offset_bottom = 62.765
-text = "Swap Card"
+text = "Swap"
 
 [node name="KeepCardButton" type="Button" parent="ActionButtons" unique_id=673306794]
 layout_mode = 0
@@ -38,7 +39,7 @@ offset_left = -47.0
 offset_top = -102.0
 offset_right = 51.75
 offset_bottom = -39.235
-text = "Keep Card"
+text = "Keep"
 
 [node name="RoundLabel" type="Label" parent="." unique_id=1974970444]
 offset_left = 27.0
@@ -48,6 +49,9 @@ offset_bottom = 67.0
 theme_override_font_sizes/font_size = 45
 text = "Round 1"
 vertical_alignment = 1
+
+[node name="Deck" parent="." unique_id=1429753082 instance=ExtResource("2_yqjtg")]
+position = Vector2(640, 360)
 
 [connection signal="button_down" from="ActionButtons/DrawNewCardButton" to="." method="_on_draw_new_card_button_down"]
 [connection signal="button_down" from="ActionButtons/SwapCardButton" to="." method="_on_swap_card_button_down"]

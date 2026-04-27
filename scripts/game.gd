@@ -69,6 +69,7 @@ func setup_game():
 	var player_id_to_card_value = draw_cards_all()
 	set_next_player_turn()
 	sync_game_setup.rpc(self.deck, player_id_to_card_value)
+	update_deck_label()
 	self.state = GameState.IN_PROGRESS
 
 
@@ -78,32 +79,31 @@ func sync_game_setup(new_deck: Array[int], player_id_to_card_value: Dictionary[i
 	self.deck = new_deck
 	set_player_cards(player_id_to_card_value)
 	set_next_player_turn()
+	update_deck_label()
 	self.state = GameState.IN_PROGRESS
+
+
+func update_deck_label():
+	var label: Label = $Deck.find_child("Label")
+	assert(label != null)
+	label.text = "%d/%d" % [self.deck.size(), (num_rounds * Game.players.size())]
 
 
 func remove_card_from_player_node(player_id):
 	for child in self.player_id_to_node[player_id].get_children():
 		# NOTE: Suboptimal str check but fine for now
-		if child.name == "card":
+		if child.is_in_group("card"):
 			child.queue_free()
 
 
 func set_player_cards(player_id_to_card_value: Dictionary[int, int]):
 	for player_id in player_id_to_card_value.keys():
-		var card_node = create_card_node_from_value(player_id_to_card_value[player_id])
+		var card_node = create_card_node_from_value(
+			player_id_to_card_value[player_id],
+			player_id != Network.peer_id
+		)
 		remove_card_from_player_node(player_id)
 		self.player_id_to_node[player_id].add_child(card_node)
-
-
-#func start_game():
-#	spawn_players()
-#	
-#	if Network.is_host():
-#		# Create deck and then send it to all players
-#		create_deck(num_rounds * Game.players.size())
-#		sync_deck.rpc(self.deck)
-#	
-#	$ActionButtons.hide()
 
 
 func _process(delta: float):
@@ -124,15 +124,9 @@ func _process(delta: float):
 		GameState.WAITING_DECK:
 			if !self.deck.is_empty():
 				setup_game() 
-				
-				# FIXME: draw_cards_all and set_next_player_turn should be rpc
-				# and syncd with players.
-				#draw_cards_all()
-				#set_next_player_turn()
-				#state = GameState.IN_PROGRESS
 
 
-# Create deck and then send it to all players
+# Host creates deck and then send it to all player peers
 func create_deck(num_cards: int):
 	self.deck.clear()
 	for i in range(1, num_cards + 1):
@@ -140,14 +134,9 @@ func create_deck(num_cards: int):
 	self.deck.shuffle()
 
 
-#@rpc("authority", "call_remote")
-#func sync_deck(host_deck: Array[int]):
-#	self.deck = host_deck
-#	print_debug("RECEIVED DECK")
-
-
+# Both host and peers distribute player nodes across the table in the their own
+# preference.
 func spawn_players():
-	# TODO: Spawn players sorted where local player is always down, but keep Game.players order
 	var num_players = Game.players.size()
 	var local_plr_idx = Game.players.find(Network.peer_id)
 	assert(local_plr_idx != -1)
@@ -166,7 +155,6 @@ func spawn_players():
 		)
 
 
-# Mock function to show random player names
 func spawn_player(position: Vector2, peer_id: int, name: String):
 	var player_node: Node2D = player_scene.instantiate()
 	if peer_id == Network.peer_id:
@@ -178,10 +166,10 @@ func spawn_player(position: Vector2, peer_id: int, name: String):
 	$Players.add_child(player_node)
 
 
-func create_card_node_from_value(card_value: int) -> Node:
+func create_card_node_from_value(card_value: int, down: bool = false) -> Node:
 	var card = card_scene.instantiate()
-	card.name = "card"
-	card.init(card_value)
+	card.add_to_group("card")
+	card.init(card_value, down)
 	return card
 
 
@@ -190,7 +178,7 @@ func fetch_card_from_deck() -> Node:
 		return null
 	
 	var card = card_scene.instantiate()
-	card.name = "card"
+	card.add_to_group("card")
 	card.init(self.deck.pop_back())
 	return card
 
@@ -199,7 +187,7 @@ func draw_cards_all() -> Dictionary[int, int]:
 	var player_id_to_card_value: Dictionary[int, int] = {}
 	for player_id in Game.players:
 		var card_value: int = self.deck.pop_back()
-		var card_node = create_card_node_from_value(card_value)
+		var card_node = create_card_node_from_value(card_value, player_id != Network.peer_id)
 		self.player_id_to_node[player_id].add_child(card_node)
 		player_id_to_card_value[player_id] = card_value
 	return player_id_to_card_value
@@ -211,9 +199,13 @@ func draw_card_current():
 	var player_node = self.player_id_to_node[current_peer_id]
 	for child in player_node.get_children():
 		# NOTE: Suboptimal str check but fine for now
-		if child.name == "card":
+		if child.is_in_group("card"):
 			child.queue_free()
-	player_node.add_child(fetch_card_from_deck())
+	var card_node = fetch_card_from_deck()
+	card_node.set_down(current_peer_id != Network.peer_id)
+	player_node.add_child(card_node)
+	update_deck_label()
+	set_next_player_turn()
 
 
 @rpc("any_peer", "call_local")
@@ -223,21 +215,80 @@ func set_next_player_turn():
 	if self.current_turn_player_idx == 0:
 		self.round += 1
 		$RoundLabel.text = "Round %d" % self.round
-		
+
+
+@rpc("any_peer", "call_local")
+func swap_current_player_card(target_player_id):
+	# Get current player card node
+	var current_player_id = Game.players[self.current_turn_player_idx]
+	var player_a_node = self.player_id_to_node[current_player_id]
+	# Get player_id card node
+	var player_b_node = self.player_id_to_node[target_player_id]
+	# Swap card values
+	var card_a_value: int = get_player_first_card_node(player_a_node).value
+	var card_b_value: int = get_player_first_card_node(player_b_node).value
+	remove_card_from_player_node(current_player_id)
+	remove_card_from_player_node(target_player_id)
+	var new_card_a_node = create_card_node_from_value(card_b_value, current_player_id != Network.peer_id)
+	var new_card_b_node = create_card_node_from_value(card_a_value, target_player_id != Network.peer_id)
+	player_a_node.add_child(new_card_a_node)
+	player_b_node.add_child(new_card_b_node)
+	# Set next player turn
+	set_next_player_turn()
 
 
 func is_my_turn() -> bool:
 	return Game.players[current_turn_player_idx] == Network.peer_id
 
 
+func get_player_first_card_node(player_node: Node) -> Node:
+	print_debug(player_node.get_child_count())
+	for child in player_node.get_children():
+		# NOTE: Suboptimal str check but fine for now
+		if child.is_in_group("card"):
+			return child
+	return null
+
+
+# Setup all area signal handlers
+func enable_player_selection():
+	for player_id in self.player_id_to_node.keys():
+		var player_node = self.player_id_to_node[player_id]
+		var card_node = get_player_first_card_node(player_node)
+		var card_area_node = card_node.find_child("Area2D")
+		card_area_node.input_event.connect(_on_card_area2d_input_event.bind(player_id, card_node))
+		card_area_node.mouse_entered.connect(set_card_border.bind(card_node, true))
+		card_area_node.mouse_exited.connect(set_card_border.bind(card_node, false))
+
+
+func disable_player_selection():
+	for player_id in self.player_id_to_node.keys():
+		var player_node = self.player_id_to_node[player_id]
+		var card_node = get_player_first_card_node(player_node)
+		var card_area_node = card_node.find_child("Area2D")
+		card_area_node.input_event.disconnect(_on_card_area2d_input_event.bind(player_id, card_node))
+		card_area_node.mouse_entered.disconnect(set_card_border.bind(card_node, true))
+		card_area_node.mouse_exited.disconnect(set_card_border.bind(card_node, false))
+
+
+func set_card_border(card_node: Node, value: bool):
+	card_node.find_child("Sprite2D").material.set_shader_parameter("enable_outline", value)
+
+
+func _on_card_area2d_input_event(_viewport, event, _shape_idx, player_id, card_node):
+	if event is InputEventMouseButton and event.pressed:
+		# Force removal of selected card outline 
+		set_card_border(card_node, false)
+		disable_player_selection()
+		swap_current_player_card.rpc(player_id)
+
+
 func _on_swap_card_button_down():
-	print_debug("Feature still not implemented WIP")
-	set_next_player_turn.rpc()
+	enable_player_selection()
 
 
 func _on_draw_new_card_button_down():
 	draw_card_current.rpc()
-	set_next_player_turn.rpc()
 
 
 func _on_keep_card_button_down():
