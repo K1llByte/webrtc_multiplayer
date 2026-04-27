@@ -32,3 +32,10 @@ func on_player_connected(peer_id: int):
 func on_player_disconnected(peer_id: int):
 	Game.players.erase(peer_id)
 	Game.players_data.erase(peer_id)
+
+
+func back_to_lobby():
+	var tree: SceneTree = get_tree()
+	tree.change_scene_to_file("res://scenes/menu.tscn")
+	await tree.scene_changed
+	tree.current_scene.load_lobby()

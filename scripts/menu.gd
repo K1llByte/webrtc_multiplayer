@@ -97,6 +97,9 @@ func _on_lobby_created(lobby_code):
 	Network.lobby_create_failed.disconnect(_on_lobby_create_failed)
 	
 	Network.lobby_disconnected.connect(_on_lobby_disconnected)
+	
+	if Game.players.size() >= Game.MIN_NUM_PLAYERS:
+			$Screen2/StartGameButton.disabled = false
 
 
 func _on_join_game_button_down():
@@ -114,7 +117,7 @@ func _on_lobby_joined(_lobby_code: String):
 	$Screen1.hide()
 	$Screen2.show()
 	$Screen2/StartGameButton.visible = Network.is_host()
-	$Screen2/CodeValueLabel.text = $Screen1/GameCodeInput.text
+	$Screen2/CodeValueLabel.text = Network.lobby_code
 	multiplayer.peer_connected.connect(_on_connected_to_host)
 	
 	Network.lobby_joined.disconnect(_on_lobby_joined)
@@ -136,6 +139,14 @@ func _on_copy_clipboard_button_down():
 
 func _on_start_game_button_down():
 	start_game.rpc()
+
+
+func load_lobby():
+	print("CALLING LOAD LOBBY")
+	if Network.is_host():
+		_on_lobby_created(Network.lobby_code)
+	else:
+		_on_lobby_joined(Network.lobby_code)
 
 
 @rpc("authority", "call_local")

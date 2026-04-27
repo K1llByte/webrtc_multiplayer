@@ -7,6 +7,7 @@ extends Node2D
 var card_scene = preload("res://scenes/card.tscn")
 
 var player_id: int = -1
+var player_name: String = ""
 
 ################################################################################
 # Implementation
@@ -14,6 +15,7 @@ var player_id: int = -1
 
 func init(_player_id: int, _name: String):
 	self.player_id = _player_id
+	self.player_name = _name
 	if self.player_id == Network.peer_id:
 		$Label.text = "* %s" % _name
 	else:

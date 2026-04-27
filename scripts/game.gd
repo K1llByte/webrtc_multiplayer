@@ -10,6 +10,7 @@ enum GameState {
 	# State where host and clients are waiting for all peers to receive the deck
 	WAITING_DECK,
 	IN_PROGRESS,
+	ENDED,
 }
 
 enum PlayerAction {
@@ -32,8 +33,9 @@ var menu_scene: PackedScene = preload("res://scenes/menu.tscn")
 var current_turn_player_idx: int = -1
 # Key is player id, value is instanced player scene node.
 var player_id_to_node: Dictionary =  {}
-var num_rounds: int = 5
+var num_rounds: int = 1
 var deck: Array[int] = []
+var deck_initial_size: int = -1
 var state: GameState
 # Data for WAITING_PLAYERS_READY
 # By default host is always ready and this data should be ignored by other
@@ -67,18 +69,19 @@ func set_player_ready():
 # Only host calls this function
 func setup_game():
 	spawn_players()
-	create_deck(num_rounds * Game.players.size())
+	create_deck()
 	var player_id_to_card_value = draw_cards_all()
 	set_next_player_turn()
-	sync_game_setup.rpc(self.deck, player_id_to_card_value)
+	sync_game_setup.rpc(self.deck, self.deck_initial_size, player_id_to_card_value)
 	update_deck_label()
 	self.state = GameState.IN_PROGRESS
 
 
 @rpc("authority")
-func sync_game_setup(new_deck: Array[int], player_id_to_card_value: Dictionary[int, int]):
+func sync_game_setup(new_deck: Array[int], new_deck_initial_size: int, player_id_to_card_value: Dictionary[int, int]):
 	spawn_players()
 	self.deck = new_deck
+	self.deck_initial_size = new_deck_initial_size
 	# Set player cards
 	for player_id in player_id_to_card_value.keys():
 		var player_node = self.player_id_to_node[player_id]
@@ -92,7 +95,7 @@ func sync_game_setup(new_deck: Array[int], player_id_to_card_value: Dictionary[i
 func update_deck_label():
 	var label: Label = $Deck.find_child("Label")
 	assert(label != null)
-	label.text = "%d/%d" % [self.deck.size(), (num_rounds * Game.players.size())]
+	label.text = "%d/%d" % [self.deck.size(), self.deck_initial_size]
 
 
 func _process(_delta: float):
@@ -115,9 +118,10 @@ func _process(_delta: float):
 
 
 # Host creates deck and then send it to all player peers
-func create_deck(num_cards: int):
+func create_deck():
+	self.deck_initial_size = (num_rounds + 1) * Game.players.size()
 	self.deck.clear()
-	for i in range(1, num_cards + 1):
+	for i in range(1, self.deck_initial_size + 1):
 		self.deck.append(i)
 	self.deck.shuffle()
 
@@ -158,6 +162,7 @@ func create_card_node_from_value(card_value: int, down: bool = false) -> Node:
 
 
 func fetch_card_from_deck() -> Node:
+	assert(!deck.is_empty(), "Deck should never be empty")
 	if deck.is_empty():
 		return null
 	
@@ -196,7 +201,28 @@ func set_next_player_turn():
 	self.current_turn_player_idx = (self.current_turn_player_idx + 1) % Game.players.size()
 	if self.current_turn_player_idx == 0:
 		self.game_round += 1
-		$RoundLabel.text = "Round %d" % self.game_round
+		self.state = GameState.ENDED
+		if self.game_round > self.num_rounds:
+			on_game_ended()
+		else:
+			$RoundLabel.text = "Round %d" % self.game_round
+
+
+func on_game_ended():
+	# Force hide action buttons
+	$ActionButtons.hide()
+	# Update label
+	$RoundLabel.text = "Winner: %s" % find_winner_name()
+	# Show all cards
+	for player_node in $Players.get_children():
+		player_node.get_card_node().set_down(false)
+	# Setup back to lobby timer
+	var timer = Timer.new()
+	timer.wait_time = 3.0
+	timer.one_shot = true
+	timer.timeout.connect(Game.back_to_lobby)
+	add_child(timer)
+	timer.start()
 
 
 @rpc("any_peer", "call_local")
@@ -208,6 +234,16 @@ func swap_current_player_card(target_player_id):
 	player_a_node.swap_cards(player_b_node)
 	# Set next player turn
 	set_next_player_turn()
+
+
+# Find winner with max card value
+func find_winner_name() -> String:
+	assert($Players.get_child_count() > 0)
+	var winner_node: Node = $Players.get_child(0)
+	for i in range(1, $Players.get_child_count()):
+		if winner_node.get_card_value() < $Players.get_child(i).get_card_value():
+			winner_node = $Players.get_child(i)
+	return winner_node.player_name
 
 
 # Setup all area signal handlers
@@ -284,11 +320,9 @@ func respawn_players():
 func _on_player_disconnected(peer_id: int):
 	# If there are no longer enough players to continue game, go back to menu.
 	if Game.players.size() < Game.MIN_NUM_PLAYERS:
-		print("Gonna change scene")
-		assert(menu_scene != null)
 		# FIXME: For some reason Im not able to do here:
 		# get_tree().change_scene_to_packed(menu_scene)
-		get_tree().change_scene_to_file("res://scenes/menu.tscn")
+		Game.back_to_lobby()
 		return
 	
 	# Remove disconnected player node
