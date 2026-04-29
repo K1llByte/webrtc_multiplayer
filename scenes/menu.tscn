@@ -8,6 +8,9 @@ font_color = Color(0.9529412, 0.05882353, 0, 1)
 [sub_resource type="LabelSettings" id="LabelSettings_5p55f"]
 font_size = 81
 
+[sub_resource type="CompressedTexture2D" id="CompressedTexture2D_yqeox"]
+load_path = "res://.godot/imported/cartinhas_sheet.png-db6e0a9d6927850d2528a0afaddbbae4.ctex"
+
 [node name="Menu" type="Control" unique_id=864261094]
 layout_mode = 3
 anchors_preset = 8
@@ -21,6 +24,7 @@ offset_right = -640.0
 offset_bottom = -360.0
 grow_horizontal = 2
 grow_vertical = 2
+pivot_offset = Vector2(-258, 207)
 script = ExtResource("1_yqeox")
 
 [node name="Screen1" type="Control" parent="." unique_id=1312208955]
@@ -110,6 +114,23 @@ offset_top = 390.0
 offset_right = 923.0
 offset_bottom = 484.0
 text = "Start Game"
+
+[node name="Camera2D" type="Camera2D" parent="." unique_id=1035114341]
+offset = Vector2(640, 360)
+
+[node name="Parallax2D" type="Parallax2D" parent="." unique_id=2043333988]
+z_index = -1
+repeat_size = Vector2(768, 384)
+autoscroll = Vector2(32, 20)
+
+[node name="Sprite2D" type="Sprite2D" parent="Parallax2D" unique_id=1150245897]
+texture_filter = 1
+texture_repeat = 2
+scale = Vector2(3, 3)
+texture = SubResource("CompressedTexture2D_yqeox")
+centered = false
+region_enabled = true
+region_rect = Rect2(0, 0, 512, 256)
 
 [connection signal="button_down" from="Screen1/JoinGameButton" to="." method="_on_join_game_button_down"]
 [connection signal="button_down" from="Screen1/CreateGameButton" to="." method="_on_create_game_button_down"]

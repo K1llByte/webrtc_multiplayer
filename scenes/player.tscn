@@ -1,17 +1,24 @@
 [gd_scene format=3 uid="uid://le8oi4v737h0"]
 
 [ext_resource type="Script" uid="uid://blwfrft7g7fko" path="res://scripts/player.gd" id="1_3vyb7"]
+[ext_resource type="FontFile" uid="uid://bu0m2drh6umwc" path="res://fonts/BoldsPixels.ttf" id="2_g2els"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_3vyb7"]
+font_color = Color(0, 0, 0, 1)
 
 [node name="Player" type="Node2D" unique_id=178286008]
 script = ExtResource("1_3vyb7")
 
 [node name="Label" type="Label" parent="." unique_id=84772068]
+texture_filter = 1
 offset_left = -111.0
-offset_top = 45.0
+offset_top = 83.0
 offset_right = 118.274994
-offset_bottom = 68.0
+offset_bottom = 106.0
 theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_fonts/font = ExtResource("2_g2els")
 text = "Username"
+label_settings = SubResource("LabelSettings_3vyb7")
 horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 2

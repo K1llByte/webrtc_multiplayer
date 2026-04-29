@@ -2,48 +2,53 @@
 
 [ext_resource type="Script" uid="uid://cgtg74kvie5aq" path="res://scripts/card.gd" id="1_6u4wf"]
 [ext_resource type="Shader" uid="uid://cst1amhbnjxcr" path="res://shaders/card.gdshader" id="2_kg30u"]
-[ext_resource type="Texture2D" uid="uid://bis7pp0yntw0s" path="res://images/blank_card.png" id="2_ktuci"]
+[ext_resource type="Texture2D" uid="uid://n1uuccmrinv6" path="res://images/card.png" id="3_ktuci"]
+[ext_resource type="FontFile" uid="uid://bu0m2drh6umwc" path="res://fonts/BoldsPixels.ttf" id="4_kg30u"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_sy11y"]
 resource_local_to_scene = true
 shader = ExtResource("2_kg30u")
 shader_parameter/enable_outline = false
 shader_parameter/color = Color(0, 0.6234133, 0.111143894, 1)
-shader_parameter/width = 10.0
+shader_parameter/width = 1.0000000475
 shader_parameter/pattern = 1
-shader_parameter/inside = false
-shader_parameter/add_margins = true
+shader_parameter/inside = true
+shader_parameter/add_margins = false
 shader_parameter/number_of_images = Vector2(1, 1)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_6u4wf"]
-size = Vector2(81.41592, 119.15929)
+size = Vector2(26, 40)
 
 [node name="Card" type="Node2D" unique_id=1429753082 groups=["card"]]
-scale = Vector2(0.565, 0.565)
 script = ExtResource("1_6u4wf")
 
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=1154900034]
+texture_filter = 1
 material = SubResource("ShaderMaterial_sy11y")
-position = Vector2(5, 0)
-scale = Vector2(0.165, 0.165)
-texture = ExtResource("2_ktuci")
+scale = Vector2(3.2, 3.2)
+texture = ExtResource("3_ktuci")
+region_enabled = true
+region_rect = Rect2(26, 0, 26, 40)
 
 [node name="Label" type="Label" parent="." unique_id=445651838]
 modulate = Color(0, 0, 0, 1)
 self_modulate = Color(0, 0, 0, 1)
-offset_left = -37.168144
-offset_top = -21.23894
-offset_right = 6.0255127
-offset_bottom = 1.7610607
-scale = Vector2(1.721, 1.721)
-text = "0"
+offset_left = -33.43
+offset_top = -23.0
+offset_right = 36.57
+offset_bottom = 23.0
+theme_override_colors/font_color = Color(0.21960784, 0.14509805, 0.22352941, 1)
+theme_override_colors/font_outline_color = Color(0.21960784, 0.14509805, 0.22352941, 1)
+theme_override_fonts/font = ExtResource("4_kg30u")
+theme_override_font_sizes/font_size = 51
+text = "99"
 horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 3
 
 [node name="Area2D" type="Area2D" parent="." unique_id=1784494358]
+visible = false
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D" unique_id=2070663098]
-position = Vector2(-1.7047995e-06, 4.1371655)
-scale = Vector2(1.0000002, 1.0000002)
+scale = Vector2(3.2, 3.2)
 shape = SubResource("RectangleShape2D_6u4wf")

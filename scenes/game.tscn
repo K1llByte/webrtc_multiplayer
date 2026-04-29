@@ -2,6 +2,10 @@
 
 [ext_resource type="Script" uid="uid://b2bfqpkfgatcd" path="res://scripts/game.gd" id="1_uwrxv"]
 [ext_resource type="PackedScene" uid="uid://dn6812iqeaqxh" path="res://scenes/card.tscn" id="2_yqjtg"]
+[ext_resource type="Texture2D" uid="uid://dn2ctjt2d2apk" path="res://images/table.png" id="3_lnu2h"]
+
+[sub_resource type="CompressedTexture2D" id="CompressedTexture2D_yqjtg"]
+load_path = "res://.godot/imported/cartinhas_sheet.png-db6e0a9d6927850d2528a0afaddbbae4.ctex"
 
 [node name="Game" type="Node2D" unique_id=1172424026]
 script = ExtResource("1_uwrxv")
@@ -52,6 +56,27 @@ vertical_alignment = 1
 
 [node name="Deck" parent="." unique_id=1429753082 instance=ExtResource("2_yqjtg")]
 position = Vector2(640, 360)
+
+[node name="BackgroundParallax2D" type="Parallax2D" parent="." unique_id=17919401]
+z_index = -1
+repeat_size = Vector2(768, 384)
+autoscroll = Vector2(32, 20)
+
+[node name="Sprite2D" type="Sprite2D" parent="BackgroundParallax2D" unique_id=980259764]
+texture_filter = 1
+texture_repeat = 2
+scale = Vector2(3, 3)
+texture = SubResource("CompressedTexture2D_yqjtg")
+centered = false
+region_enabled = true
+region_rect = Rect2(0, 0, 512, 256)
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=1803787806]
+z_index = -1
+texture_filter = 1
+scale = Vector2(3.2, 3.2)
+texture = ExtResource("3_lnu2h")
+centered = false
 
 [connection signal="button_down" from="ActionButtons/DrawNewCardButton" to="." method="_on_draw_new_card_button_down"]
 [connection signal="button_down" from="ActionButtons/SwapCardButton" to="." method="_on_swap_card_button_down"]
