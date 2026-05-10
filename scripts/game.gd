@@ -33,7 +33,7 @@ var menu_scene: PackedScene = preload("res://scenes/menu.tscn")
 var current_turn_player_idx: int = -1
 # Key is player id, value is instanced player scene node.
 var player_id_to_node: Dictionary =  {}
-var num_rounds: int = 1
+var num_rounds: int = 5
 var deck: Array[int] = []
 var deck_initial_size: int = -1
 var state: GameState
@@ -73,7 +73,7 @@ func setup_game():
 	var player_id_to_card_value = draw_cards_all()
 	set_next_player_turn()
 	sync_game_setup.rpc(self.deck, self.deck_initial_size, player_id_to_card_value)
-	update_deck_label()
+	update_deck_node()
 	self.state = GameState.IN_PROGRESS
 
 
@@ -88,15 +88,24 @@ func sync_game_setup(new_deck: Array[int], new_deck_initial_size: int, player_id
 		player_node.set_card(player_id_to_card_value[player_id])
 	
 	set_next_player_turn()
-	update_deck_label()
+	update_deck_node()
 	self.state = GameState.IN_PROGRESS
 
 
-func update_deck_label():
+func update_deck_node():
 	var label: Label = $Deck.find_child("Label")
 	assert(label != null)
 	label.text = "%d/%d" % [self.deck.size(), self.deck_initial_size]
-
+	
+	var deck_factor: float = float(self.deck.size()) / float(self.deck_initial_size)
+	if deck_factor < 0.25:
+		$Deck.play("cards1")
+	elif deck_factor < 0.50:
+		$Deck.play("cards2")
+	elif deck_factor < 0.75:
+		$Deck.play("cards3")
+	else:
+		$Deck.play("cards4")
 
 func _process(_delta: float):
 	match self.state:
@@ -192,7 +201,7 @@ func draw_card_current():
 	var card_node = fetch_card_from_deck()
 	card_node.set_down(current_peer_id != Network.peer_id)
 	player_node.add_child(card_node)
-	update_deck_label()
+	update_deck_node()
 	set_next_player_turn()
 
 
@@ -278,7 +287,7 @@ func set_card_border(card_node: Node, value: bool):
 
 
 func _on_card_area2d_input_event(_viewport, event, _shape_idx, player_id, card_node):
-	if event is InputEventMouseButton and event.pressed:
+	if event is InputEventMouseButton and event.button_index == MouseButton.MOUSE_BUTTON_LEFT and event.pressed:
 		# Force removal of selected card outline 
 		set_card_border(card_node, false)
 		disable_player_selection()

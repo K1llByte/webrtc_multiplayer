@@ -142,7 +142,6 @@ func _on_start_game_button_down():
 
 
 func load_lobby():
-	print("CALLING LOAD LOBBY")
 	if Network.is_host():
 		_on_lobby_created(Network.lobby_code)
 	else:

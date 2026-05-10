@@ -1,12 +1,18 @@
 [gd_scene format=3 uid="uid://umlnblsfinio"]
 
 [ext_resource type="Script" uid="uid://c27xwoegnbdrg" path="res://scripts/menu.gd" id="1_yqeox"]
+[ext_resource type="FontFile" uid="uid://bu0m2drh6umwc" path="res://fonts/BoldsPixels.ttf" id="2_vjb58"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_yqeox"]
 font_color = Color(0.9529412, 0.05882353, 0, 1)
 
 [sub_resource type="LabelSettings" id="LabelSettings_5p55f"]
-font_size = 81
+font = ExtResource("2_vjb58")
+font_size = 80
+font_color = Color(0.9254902, 0.9254902, 0.9137255, 1)
+shadow_size = 0
+shadow_color = Color(0.38431373, 0.32941177, 0.39607844, 1)
+shadow_offset = Vector2(0, 10)
 
 [sub_resource type="CompressedTexture2D" id="CompressedTexture2D_yqeox"]
 load_path = "res://.godot/imported/cartinhas_sheet.png-db6e0a9d6927850d2528a0afaddbbae4.ctex"
@@ -88,13 +94,15 @@ offset_bottom = 604.0
 
 [node name="CodeValueLabel" type="Label" parent="Screen2" unique_id=876554944]
 layout_mode = 0
-offset_left = 623.0
+offset_left = 634.99994
 offset_top = 99.99999
-offset_right = 901.0
+offset_right = 912.99994
 offset_bottom = 211.0
 scale = Vector2(0.9719091, 1.1351768)
 text = "123456"
 label_settings = SubResource("LabelSettings_5p55f")
+horizontal_alignment = 2
+vertical_alignment = 1
 
 [node name="CopyCodeButton" type="Button" parent="Screen2" unique_id=1309810701]
 layout_mode = 1
