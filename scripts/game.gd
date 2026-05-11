@@ -32,7 +32,7 @@ var menu_scene: PackedScene = preload("res://scenes/menu.tscn")
 # time the firstplayer will be the host.
 var current_turn_player_idx: int = -1
 # Key is player id, value is instanced player scene node.
-var player_id_to_node: Dictionary =  {}
+var player_id_to_node: Dictionary = {}
 var num_rounds: int = 5
 var deck: Array[int] = []
 var deck_initial_size: int = -1
@@ -93,19 +93,18 @@ func sync_game_setup(new_deck: Array[int], new_deck_initial_size: int, player_id
 
 
 func update_deck_node():
-	var label: Label = $Deck.find_child("Label")
-	assert(label != null)
-	label.text = "%d/%d" % [self.deck.size(), self.deck_initial_size]
+	$DeckGroup/Label.text = "%d/%d" % [self.deck.size(), self.deck_initial_size]
 	
 	var deck_factor: float = float(self.deck.size()) / float(self.deck_initial_size)
 	if deck_factor < 0.25:
-		$Deck.play("cards1")
+		$DeckGroup/Deck.play("cards1")
 	elif deck_factor < 0.50:
-		$Deck.play("cards2")
+		$DeckGroup/Deck.play("cards2")
 	elif deck_factor < 0.75:
-		$Deck.play("cards3")
+		$DeckGroup/Deck.play("cards3")
 	else:
-		$Deck.play("cards4")
+		$DeckGroup/Deck.play("cards4")
+
 
 func _process(_delta: float):
 	match self.state:
@@ -210,8 +209,8 @@ func set_next_player_turn():
 	self.current_turn_player_idx = (self.current_turn_player_idx + 1) % Game.players.size()
 	if self.current_turn_player_idx == 0:
 		self.game_round += 1
-		self.state = GameState.ENDED
 		if self.game_round > self.num_rounds:
+			self.state = GameState.ENDED
 			on_game_ended()
 		else:
 			$RoundLabel.text = "Round %d" % self.game_round
@@ -321,7 +320,6 @@ func respawn_players():
 		var y = spawner_ellipse_height * cos(t)
 		
 		var plr_position = $SpawnPoint.global_position + Vector2(x, y)
-		
 		
 		self.player_id_to_node[Game.players[player_i]].position = plr_position
 

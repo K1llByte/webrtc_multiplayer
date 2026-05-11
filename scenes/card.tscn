@@ -9,7 +9,7 @@
 resource_local_to_scene = true
 shader = ExtResource("2_kg30u")
 shader_parameter/enable_outline = false
-shader_parameter/color = Color(0.32941177, 0.5764706, 0.29803923, 1)
+shader_parameter/color = Color(1, 0.91595733, 0.8683831, 1)
 shader_parameter/width = 1.0000000475
 shader_parameter/pattern = 1
 shader_parameter/inside = false
