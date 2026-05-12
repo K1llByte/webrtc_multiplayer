@@ -2,6 +2,9 @@
 
 [ext_resource type="Script" uid="uid://c27xwoegnbdrg" path="res://scripts/menu.gd" id="1_yqeox"]
 [ext_resource type="FontFile" uid="uid://bu0m2drh6umwc" path="res://fonts/BoldsPixels.ttf" id="2_vjb58"]
+[ext_resource type="Texture2D" uid="uid://bjc0wybyxiva5" path="res://images/create_game.png" id="3_con2f"]
+[ext_resource type="Script" uid="uid://coania37tv5hl" path="res://scripts/button.gd" id="4_mhnvy"]
+[ext_resource type="Texture2D" uid="uid://sfsnej516xh0" path="res://images/join_game.png" id="5_4ytvr"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_yqeox"]
 font_color = Color(0.9529412, 0.05882353, 0, 1)
@@ -17,13 +20,13 @@ shadow_offset = Vector2(0, 10)
 [sub_resource type="CompressedTexture2D" id="CompressedTexture2D_yqeox"]
 load_path = "res://.godot/imported/cartinhas_sheet.png-db6e0a9d6927850d2528a0afaddbbae4.ctex"
 
-[sub_resource type="FontVariation" id="FontVariation_vjb58"]
-base_font = ExtResource("2_vjb58")
+[sub_resource type="AtlasTexture" id="AtlasTexture_mhnvy"]
+atlas = ExtResource("3_con2f")
+region = Rect2(0, 0, 93, 12)
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_vjb58"]
-bg_color = Color(0.6, 0.6, 0.6, 0)
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_con2f"]
+[sub_resource type="AtlasTexture" id="AtlasTexture_g3eks"]
+atlas = ExtResource("5_4ytvr")
+region = Rect2(0, 0, 0, 12)
 
 [node name="Menu" type="Control" unique_id=864261094]
 layout_mode = 3
@@ -41,12 +44,13 @@ grow_vertical = 2
 pivot_offset = Vector2(-258, 207)
 script = ExtResource("1_yqeox")
 
-[node name="Screen1" type="Control" parent="." unique_id=1312208955]
+[node name="StartScreen" type="Control" parent="." unique_id=1312208955]
+visible = false
 anchors_preset = 0
 offset_right = 40.0
 offset_bottom = 40.0
 
-[node name="JoinGameButton" type="Button" parent="Screen1" unique_id=1986918473]
+[node name="JoinGameButton" type="Button" parent="StartScreen" unique_id=1986918473]
 layout_mode = 0
 offset_left = 573.0
 offset_top = 251.0
@@ -54,7 +58,7 @@ offset_right = 854.7737
 offset_bottom = 382.0
 text = "Join Game"
 
-[node name="CreateGameButton" type="Button" parent="Screen1" unique_id=1178052477]
+[node name="CreateGameButton" type="Button" parent="StartScreen" unique_id=1178052477]
 layout_mode = 0
 offset_left = 195.0
 offset_top = 251.0
@@ -62,7 +66,7 @@ offset_right = 476.7736
 offset_bottom = 382.0
 text = "Create Game"
 
-[node name="GameCodeInput" type="TextEdit" parent="Screen1" unique_id=1624916382]
+[node name="GameCodeInput" type="TextEdit" parent="StartScreen" unique_id=1624916382]
 layout_mode = 0
 offset_left = 573.0
 offset_top = 116.0
@@ -70,7 +74,7 @@ offset_right = 855.0
 offset_bottom = 215.0
 placeholder_text = "Game Code"
 
-[node name="UsernameInput" type="TextEdit" parent="Screen1" unique_id=1904115426]
+[node name="UsernameInput" type="TextEdit" parent="StartScreen" unique_id=1904115426]
 layout_mode = 0
 offset_left = 195.0
 offset_top = 116.0
@@ -78,7 +82,7 @@ offset_right = 477.0
 offset_bottom = 215.0
 placeholder_text = "Username"
 
-[node name="ErrorLabel" type="Label" parent="Screen1" unique_id=324751089]
+[node name="ErrorLabel" type="Label" parent="StartScreen" unique_id=324751089]
 layout_mode = 0
 offset_left = 340.0
 offset_top = 441.0
@@ -148,82 +152,44 @@ centered = false
 region_enabled = true
 region_rect = Rect2(0, 0, 512, 256)
 
-[node name="Screen1New" type="Control" parent="." unique_id=1248922034]
-visible = false
+[node name="NewStartScreen" type="Control" parent="." unique_id=1248922034]
 anchors_preset = 0
 offset_right = 40.0
 offset_bottom = 40.0
 
-[node name="CGButton" type="Button" parent="Screen1New" unique_id=1460761113]
+[node name="CreateGameButton" type="Button" parent="NewStartScreen" unique_id=1204362474]
+texture_filter = 1
 layout_mode = 0
-offset_left = 88.685
-offset_top = 260.8
-offset_right = 488.685
-offset_bottom = 335.8
-theme_override_fonts/font = SubResource("FontVariation_vjb58")
-theme_override_font_sizes/font_size = 48
-theme_override_styles/normal = SubResource("StyleBoxFlat_vjb58")
-text = "CREATE GAME"
-alignment = 0
+offset_left = 80.0
+offset_top = 300.0
+offset_right = 181.00003
+offset_bottom = 320.0
+scale = Vector2(4, 4)
+icon = SubResource("AtlasTexture_mhnvy")
+flat = true
+script = ExtResource("4_mhnvy")
 
-[node name="JGButton" type="Button" parent="Screen1New" unique_id=178742594]
+[node name="JoinGameButton" type="Button" parent="NewStartScreen" unique_id=943243412]
+texture_filter = 1
 layout_mode = 0
-offset_left = 88.685
-offset_top = 367.8
-offset_right = 488.685
-offset_bottom = 442.8
-theme_override_font_sizes/font_size = 48
-theme_override_styles/normal = SubResource("StyleBoxEmpty_con2f")
-text = "Join Game"
-alignment = 0
+offset_left = 80.0
+offset_top = 400.0
+offset_right = 181.0
+offset_bottom = 420.0
+scale = Vector2(4, 4)
+icon = SubResource("AtlasTexture_g3eks")
+flat = true
+script = ExtResource("4_mhnvy")
 
-[node name="JoinGameButton" type="Button" parent="Screen1New" unique_id=1558144011]
-visible = false
-layout_mode = 0
-offset_left = 573.0
-offset_top = 251.0
-offset_right = 854.7737
-offset_bottom = 382.0
-text = "Join Game"
-
-[node name="CreateGameButton" type="Button" parent="Screen1New" unique_id=942182191]
-visible = false
-layout_mode = 0
-offset_left = 195.0
-offset_top = 251.0
-offset_right = 476.7736
-offset_bottom = 382.0
-text = "Create Game"
-
-[node name="GameCodeInput" type="TextEdit" parent="Screen1New" unique_id=1681288334]
-visible = false
-layout_mode = 0
-offset_left = 573.0
-offset_top = 116.0
-offset_right = 855.0
-offset_bottom = 215.0
-placeholder_text = "Game Code"
-
-[node name="UsernameInput" type="TextEdit" parent="Screen1New" unique_id=1549232120]
-visible = false
-layout_mode = 0
-offset_left = 195.0
-offset_top = 116.0
-offset_right = 477.0
-offset_bottom = 215.0
-placeholder_text = "Username"
-
-[node name="ErrorLabel" type="Label" parent="Screen1New" unique_id=3148833]
-visible = false
-layout_mode = 0
-offset_left = 340.0
-offset_top = 441.0
-offset_right = 716.0
-offset_bottom = 464.0
-label_settings = SubResource("LabelSettings_yqeox")
-horizontal_alignment = 1
-
-[connection signal="button_down" from="Screen1/JoinGameButton" to="." method="_on_join_game_button_down"]
-[connection signal="button_down" from="Screen1/CreateGameButton" to="." method="_on_create_game_button_down"]
+[connection signal="button_down" from="StartScreen/JoinGameButton" to="." method="_on_join_game_button_down"]
+[connection signal="button_down" from="StartScreen/CreateGameButton" to="." method="_on_create_game_button_down"]
 [connection signal="button_down" from="Screen2/CopyCodeButton" to="." method="_on_copy_clipboard_button_down"]
 [connection signal="button_down" from="Screen2/StartGameButton" to="." method="_on_start_game_button_down"]
+[connection signal="button_down" from="NewStartScreen/CreateGameButton" to="NewStartScreen/CreateGameButton" method="_on_button_down"]
+[connection signal="button_up" from="NewStartScreen/CreateGameButton" to="NewStartScreen/CreateGameButton" method="_on_button_up"]
+[connection signal="mouse_entered" from="NewStartScreen/CreateGameButton" to="NewStartScreen/CreateGameButton" method="_on_mouse_entered"]
+[connection signal="mouse_exited" from="NewStartScreen/CreateGameButton" to="NewStartScreen/CreateGameButton" method="_on_mouse_exited"]
+[connection signal="button_down" from="NewStartScreen/JoinGameButton" to="NewStartScreen/JoinGameButton" method="_on_button_down"]
+[connection signal="button_up" from="NewStartScreen/JoinGameButton" to="NewStartScreen/JoinGameButton" method="_on_button_up"]
+[connection signal="mouse_entered" from="NewStartScreen/JoinGameButton" to="NewStartScreen/JoinGameButton" method="_on_mouse_entered"]
+[connection signal="mouse_exited" from="NewStartScreen/JoinGameButton" to="NewStartScreen/JoinGameButton" method="_on_mouse_exited"]

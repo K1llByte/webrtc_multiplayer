@@ -26,9 +26,9 @@ func fill_connected_peers():
 
 # Get player name from the input
 func player_name() -> String:
-	if $Screen1/UsernameInput.text.is_empty():
+	if $StartScreen/UsernameInput.text.is_empty():
 		return "player%d" % Network.peer_id
-	return $Screen1/UsernameInput.text
+	return $StartScreen/UsernameInput.text
 
 
 # Server will send list of all players and fill connected player list
@@ -77,13 +77,13 @@ func _on_create_game_button_down():
 
 
 func _on_lobby_create_failed():
-	$Screen1/ErrorLabel.text = "Failed to create game"
+	$StartScreen/ErrorLabel.text = "Failed to create game"
 
 
 func _on_lobby_created(lobby_code):
 	add_player(Network.peer_id, player_name())
 	
-	$Screen1.hide()
+	$StartScreen.hide()
 	$Screen2.show()
 	$Screen2/StartGameButton.visible = Network.is_host()
 	$Screen2/CodeValueLabel.text = lobby_code
@@ -105,16 +105,16 @@ func _on_lobby_created(lobby_code):
 func _on_join_game_button_down():
 	Network.lobby_joined.connect(_on_lobby_joined)
 	Network.lobby_join_failed.connect(_on_lobby_join_failed)
-	var lobby_code = $Screen1/GameCodeInput.text
+	var lobby_code = $StartScreen/GameCodeInput.text
 	Network.join_lobby(lobby_code)
 
 
 func _on_lobby_join_failed():
-	$Screen1/ErrorLabel.text = "Failed to join game"
+	$StartScreen/ErrorLabel.text = "Failed to join game"
 
 
 func _on_lobby_joined(_lobby_code: String):
-	$Screen1.hide()
+	$StartScreen.hide()
 	$Screen2.show()
 	$Screen2/StartGameButton.visible = Network.is_host()
 	$Screen2/CodeValueLabel.text = Network.lobby_code
@@ -129,8 +129,8 @@ func _on_lobby_joined(_lobby_code: String):
 func _on_lobby_disconnected():
 	Network.lobby_disconnected.disconnect(_on_lobby_disconnected)
 	$Screen2.hide()
-	$Screen1.show()
-	$Screen1/ErrorLabel.text = "Disconnected from lobby"
+	$StartScreen.show()
+	$StartScreen/ErrorLabel.text = "Disconnected from lobby"
 
 
 func _on_copy_clipboard_button_down():

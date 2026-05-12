@@ -1,0 +1,35 @@
+[gd_scene format=3 uid="uid://p6wyolgg01bt"]
+
+[ext_resource type="Texture2D" uid="uid://bjc0wybyxiva5" path="res://images/create_game.png" id="1_bn4cq"]
+[ext_resource type="Script" uid="uid://coania37tv5hl" path="res://scripts/button.gd" id="2_rs181"]
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_gyckb"]
+texture = ExtResource("1_bn4cq")
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_7r4ng"]
+atlas = ExtResource("1_bn4cq")
+region = Rect2(0, 0, 93, 12)
+
+[node name="TextButton" type="Control" unique_id=1820201690]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Button" type="Button" parent="." unique_id=711569789]
+texture_filter = 1
+layout_mode = 0
+offset_right = 93.0
+offset_bottom = 12.0
+scale = Vector2(3, 3)
+theme_override_styles/normal = SubResource("StyleBoxTexture_gyckb")
+icon = SubResource("AtlasTexture_7r4ng")
+flat = true
+script = ExtResource("2_rs181")
+
+[connection signal="button_down" from="Button" to="Button" method="_on_button_down"]
+[connection signal="button_up" from="Button" to="Button" method="_on_button_up"]
+[connection signal="mouse_entered" from="Button" to="Button" method="_on_mouse_entered"]
+[connection signal="mouse_exited" from="Button" to="Button" method="_on_mouse_exited"]
